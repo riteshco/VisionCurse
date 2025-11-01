@@ -2,6 +2,20 @@ import pygame
 from maze import *
 from player import *
 
+def create_light_aura(radius):
+    surface = pygame.Surface((radius * 2, radius * 2))
+    surface.fill(BLACK)
+    
+    # Draw concentric circles, getting dimmer from center
+    for r in range(radius, 0, -1):
+        brightness = int(255 * (1.0 - (r / radius)))
+        color = (brightness, brightness, brightness)
+        pygame.draw.circle(surface, color, (radius, radius), r)
+        
+    # Set black to be transparent (colorkey)
+    surface.set_colorkey(BLACK)
+    return surface
+
 # --- Main Game Function ---
 def main():
     pygame.init()
@@ -19,7 +33,8 @@ def main():
     start_y = (CELL_SIZE / 2) - (PLAYER_SIZE / 2)
     player = Player([start_x, start_y], PLAYER_SIZE)
 
-    fog_surface = pygame.Surface((WIN_WIDTH, WIN_HEIGHT), pygame.SRCALPHA)
+    light_surface = pygame.Surface((WIN_WIDTH , WIN_HEIGHT))
+    light_aura_sprite = create_light_aura(LIGHT_AURA_RADIUS)
     
     # --- Camera Offset ---
     # This will store the [x, y] of the top-left corner of the camera
@@ -103,21 +118,55 @@ def main():
         # Draw the player
         player.render(screen, camera_offset)
 
+        light_surface.fill(BLACK)
+
         vision_polygon_world = cast_rays(player, grid , camera_offset)
 
+        player_screen_center = player.get_aura_center(camera_offset)
         vision_polygon_screen = []
         for world_pos in vision_polygon_world:
             screen_x = world_pos[0] - camera_offset[0]
             screen_y = world_pos[1] - camera_offset[1]
             vision_polygon_screen.append((screen_x, screen_y))
 
-        fog_surface.fill((0, 0, 0, 255))
+        if len(vision_polygon_screen) > 2:
+            
+            # Calculate brightness steps
+            base_c = FLASHLIGHT_BASE_BRIGHTNESS
+            max_c = FLASHLIGHT_MAX_BRIGHTNESS
+            steps = FLASHLIGHT_GRADIENT_STEPS
+            
+            # Get the points *without* the player center (which is at index 0)
+            ray_end_points = vision_polygon_screen[1:]
+            
+            for i in range(steps, 0, -1): # Draw from biggest (dimmest) to smallest (brightest)
+                scale = i / steps
+                
+                # Calculate color for this step (dimmest to brightest)
+                r = max_c[0] - (max_c[0] - base_c[0]) * scale
+                g = max_c[1] - (max_c[1] - base_c[1]) * scale
+                b = max_c[2] - (max_c[2] - base_c[2]) * scale
+                color = (int(r), int(g), int(b))
 
-        if len(vision_polygon_screen) > 2: # Need at least 3 points to draw
-            pygame.draw.circle(fog_surface, (0, 0, 0, 0), player.get_aura_center(camera_offset), AURA_RADIUS)
-            pygame.draw.polygon(fog_surface, (0, 0, 0, 0), vision_polygon_screen)
+                # Create the scaled polygon for this step
+                scaled_polygon = [player_screen_center] # Start at the player
+                for p in ray_end_points:
+                    # Get vector from player to point
+                    vec_x = p[0] - player_screen_center[0]
+                    vec_y = p[1] - player_screen_center[1]
+                    
+                    # Scale vector and add back to player center
+                    scaled_x = player_screen_center[0] + vec_x * scale
+                    scaled_y = player_screen_center[1] + vec_y * scale
+                    scaled_polygon.append((scaled_x, scaled_y))
+                
+                # Draw the polygon
+                pygame.draw.polygon(light_surface, color, scaled_polygon)
         
-        screen.blit(fog_surface, (0, 0))
+        aura_rect = light_aura_sprite.get_rect(center=player_screen_center)
+        light_surface.blit(light_aura_sprite, aura_rect, special_flags=pygame.BLEND_RGB_ADD)
+
+        screen.blit(light_surface, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
         # Update the display
         pygame.display.flip()
