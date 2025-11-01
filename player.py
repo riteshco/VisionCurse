@@ -72,7 +72,7 @@ class Player:
                 self.is_reloading = False
                 print("Reload complete.")
     
-    def swap_item(self):
+    def swap_item(self , swap_sound):
         if self.is_reloading: # Don't swap while reloading
             return
             
@@ -80,19 +80,21 @@ class Player:
             self.equipped_item = "shotgun"
         else:
             self.equipped_item = "flashlight"
+        swap_sound.play()
         print(f"Equipped: {self.equipped_item}")
 
-    def shoot(self, target_angle, grid):
+    def shoot(self, target_angle, grid , fire_sound , reload_sound):
         # --- NEW: Shotgun shooting logic ---
         if self.equipped_item != "shotgun" or self.is_reloading:
             return None
         
         if self.shotgun_ammo <= 0:
             print("Out of ammo. Reloading...")
-            self.reload()
+            self.reload(reload_sound)
             return None
             
         self.shotgun_ammo -= 1
+        fire_sound.play()
         pellet_lines = []
         player_center_world = self.get_center_pos()
 
@@ -132,11 +134,12 @@ class Player:
             
         return pellet_lines
 
-    def reload(self):
+    def reload(self , reload_sound):
         if self.equipped_item == "shotgun" and not self.is_reloading and self.shotgun_ammo < SHOTGUN_AMMO_CAPACITY:
             print("Reloading...")
             self.is_reloading = True
             self.reload_start_time = pygame.time.get_ticks()
+            reload_sound.play()
 
     def move_player(self, grid, dx, dy):
         new_x = self.pos[0] + dx * self.speed
@@ -169,8 +172,9 @@ class Player:
         if can_move_y:
             self.pos[1] = new_y
     
-    def add_skill_points(self, amount):
+    def add_skill_points(self, amount , add_sound):
         self.skill_points += amount
+        add_sound.play()
         print(f"Gained {amount} skill points! Total: {self.skill_points}")
 
     def upgrade(self, upgrade_type):
@@ -179,7 +183,7 @@ class Player:
             return
 
         self.skill_points -= SKILL_POINT_COST
-        
+
         if upgrade_type == 'health':
             self.max_health += UPGRADE_HEALTH_AMOUNT
             self.health = self.max_health # Full heal on upgrade
@@ -207,6 +211,6 @@ class Player:
         elif upgrade_type == 'pellet_count':
             self.shotgun_pellet_count = min(MAX_UPGRADABLE_PELLET_COUNT , self.shotgun_pellet_count + 1)
             print(f"Upgraded Shotgun pellet count to {self.shotgun_pellet_count}")
-
+        
         return True
 

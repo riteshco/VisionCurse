@@ -54,6 +54,33 @@ def main():
     pygame.mixer.init()
     pygame.mixer.set_num_channels(16)
 
+    try:
+        sounds = {
+            'shotgun_fire': pygame.mixer.Sound(SOUND_SHOTGUN_FIRE),
+            'shotgun_reload': pygame.mixer.Sound(SOUND_SHOTGUN_RELOAD),
+            'swap_item': pygame.mixer.Sound(SOUND_SWAP_ITEM),
+            'footsteps': pygame.mixer.Sound(SOUND_PLAYER_MOVE),
+            'enemy_attack': pygame.mixer.Sound(SOUND_ENEMY_ATTACK),
+            'skill_upgrade': pygame.mixer.Sound(SOUND_SKILL_UPGRADE),
+            'skill_gain': pygame.mixer.Sound(SOUND_SKILL_GAIN),
+            'enemy_alert': pygame.mixer.Sound(SOUND_ENEMY_ALERT)
+        }
+
+        # Set volumes
+        sounds['footsteps'].set_volume(0.4)
+        sounds['shotgun_fire'].set_volume(0.7)
+        sounds['swap_item'].set_volume(0.7)
+
+        # Background music (Music module is separate from Sound)
+        pygame.mixer.music.load(MUSIC_BACKGROUND)
+        pygame.mixer.music.set_volume(0.3)
+        pygame.mixer.music.play(-1) # -1 loops forever
+
+    except pygame.error as e:
+        print(f"Error loading sound: {e}")
+
+    footstep_channel = pygame.mixer.Channel(1)
+
     screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     pygame.display.set_caption('VisionCurse - The Cave')
     clock = pygame.time.Clock()
@@ -132,7 +159,7 @@ def main():
                         target_angle = math.atan2(mouse_y - player_screen_center[1], 
                                                   mouse_x - player_screen_center[0])
 
-                        hits = player.shoot(target_angle, grid)
+                        hits = player.shoot(target_angle, grid , sounds['shotgun_fire'] , sounds['shotgun_reload'])
                         if hits:
                             pellet_lines = hits
                             pellet_draw_start_time = current_time
@@ -152,31 +179,42 @@ def main():
                             move["Right"] = True
                         if event.key == pygame.K_a:
                             move["Left"] = True
+                        
+                        if (dx != 0 or dy != 0) and not footstep_channel.get_busy():
+                            footstep_channel.play(sounds['footsteps'], -1)
+                        elif (dx == 0 and dy == 0) and footstep_channel.get_busy():
+                            footstep_channel.stop()
 
                         if event.key == SWAP_KEY:
-                            player.swap_item()
+                            player.swap_item(sounds['swap_item'])
                         if event.key == RELOAD_KEY:
-                            player.reload()
+                            player.reload(sounds['shotgun_reload'])
 
                         if event.key == UPGRADE_KEY_HEALTH:
+                            sounds['skill_upgrade'].play()
                             player.upgrade('health')
                         elif event.key == UPGRADE_KEY_AMMO:
+                            sounds['skill_upgrade'].play()
                             player.upgrade('ammo')
                         elif event.key == UPGRADE_KEY_RELOAD:
+                            sounds['skill_upgrade'].play()
                             player.upgrade('reload')
                         elif event.key == UPGRADE_KEY_FOV:
+                            sounds['skill_upgrade'].play()
                             if player.upgrade('fov'):
                                 current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
                                 current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
                                 current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
                                 print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                         elif event.key == UPGRADE_KEY_BRIGHTNESS:
+                            sounds['skill_upgrade'].play()
                             if player.upgrade('brightness'):
                                 current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
                                 current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
                                 current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
                                 print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                         elif event.key == UPGRADE_PELLET_COUNT:
+                            sounds['skill_upgrade'].play()
                             player.upgrade('pellet_count')
 
                 if event.type == pygame.KEYUP:
@@ -196,6 +234,7 @@ def main():
                 if move["Down"]: dy = 1
                 if move["Left"]: dx = -1
                 if move["Right"]: dx = 1
+
                 player.move_player(grid, dx, dy)
                 player.update() # Update reload timer
 
@@ -208,7 +247,7 @@ def main():
 
                         spawn_col, spawn_row = player_col, player_row
                         dist = 0
-                        while dist < 5: # Spawn at least 5 cells away
+                        while dist < 2 or dist > 7: # Spawn at least 5 cells away
                             spawn_col = random.randint(0, COLS - 1)
                             spawn_row = random.randint(0, ROWS - 1)
                             dist = math.dist((player_col, player_row), (spawn_col, spawn_row))
@@ -221,7 +260,10 @@ def main():
 
                 # --- NEW: Update Enemies ---
                 for enemy in enemies:
-                    enemy.update(player, grid , current_detection_range)
+                    enemy.update(player, grid , current_detection_range , sounds['enemy_attack'] , sounds['enemy_alert'])
+                    if enemy.is_far:
+                        enemies.remove(enemy)
+                    
 
                 # --- NEW: Check pellet hits on enemies ---
                 if pellet_lines:
@@ -243,7 +285,7 @@ def main():
                     # Remove dead enemies and grant skill points
                     for enemy in dead_enemies:
                         enemies.remove(enemy) 
-                        player.add_skill_points(ENEMY_KILL_REWARD)
+                        player.add_skill_points(ENEMY_KILL_REWARD , sounds['skill_gain'])
                         print(f"Enemy killed! Player has {player.skill_points} points.")
 
             # --- Camera Update ---

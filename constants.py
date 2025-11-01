@@ -60,7 +60,7 @@ ENEMY_MELEE_DAMAGE = 10
 ENEMY_ATTACK_COOLDOWN = 1000 # 1 second
 ENEMY_DETECTION_RANGE = 250 # pixels
 ENEMY_SPAWN_INTERVAL = 1000 # 10 seconds
-ENEMY_MAX_COUNT = 5 # Max enemies on map
+ENEMY_MAX_COUNT = 10 # Max enemies on map
 ENEMY_KILL_REWARD = 1
 
 
@@ -83,3 +83,25 @@ MAX_UPGRADABLE_PELLET_COUNT = 5
 FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION = 100 # ms
 FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE = 1
 FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE = 30 # pixels
+
+BOSS_SIZE = PLAYER_SIZE * 10 # 10x player size
+BOSS_HEALTH = 1000 # Takes 40 pellets to kill (1000 / 25)
+BOSS_SPEED = 2.0
+BOSS_COLOR = (255, 0, 255) # Magenta
+BOSS_MELEE_DAMAGE = 25
+BOSS_ATTACK_COOLDOWN = 1500 # 1.5 seconds
+
+# Arena will be 2x the window size
+ARENA_WIDTH = WIN_WIDTH * 2
+ARENA_HEIGHT = WIN_HEIGHT * 2
+ARENA_WALL_THICKNESS = 50
+
+SOUND_SHOTGUN_FIRE = "sounds/shotgun_fire.mp3"
+SOUND_SHOTGUN_RELOAD = "sounds/shotgun_reload.mp3"
+SOUND_SWAP_ITEM = "sounds/swap_item.mp3"
+SOUND_PLAYER_MOVE = "sounds/footsteps.mp3" # Should be a short, looping sound
+SOUND_ENEMY_ATTACK = "sounds/enemy_attack.mp3"
+SOUND_ENEMY_ALERT = "sounds/enemy_alert.mp3" # Bonus: play when they spot player
+SOUND_SKILL_UPGRADE = "sounds/skill_upgrade.mp3"
+SOUND_SKILL_GAIN = "sounds/skill_gain.mp3"
+MUSIC_BACKGROUND = "sounds/background_music.mp3"

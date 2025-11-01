@@ -10,6 +10,8 @@ class Enemy:
         self.health = ENEMY_HEALTH
         self.speed = ENEMY_SPEED
         self.last_attack_time = 0
+        self.is_alerted = False
+        self.is_far = False
 
     def render(self, screen, camera_offset):
         # Calculate screen position
@@ -32,7 +34,7 @@ class Enemy:
             return True # Return True if dead
         return False
 
-    def update(self, player, grid , current_detection_range):
+    def update(self, player, grid , current_detection_range , attack_sound , alert_sound):
         player_center = player.get_center_pos()
         self_center = self.get_center_pos()
 
@@ -40,6 +42,9 @@ class Enemy:
 
         # --- AI Logic ---
         if dist < current_detection_range:
+            if not self.is_alerted:
+                self.is_alerted = True
+                alert_sound.play()
             # 1. Move towards player
             dx = player_center[0] - self_center[0]
             dy = player_center[1] - self_center[1]
@@ -56,7 +61,15 @@ class Enemy:
                 current_time = pygame.time.get_ticks()
                 if current_time - self.last_attack_time > ENEMY_ATTACK_COOLDOWN:
                     player.take_damage(ENEMY_MELEE_DAMAGE)
+                    attack_sound.play()
                     self.last_attack_time = current_time
+        elif dist > current_detection_range * 1.5:
+            self.is_alerted = False
+        
+        if dist > current_detection_range * 3:
+            self.is_far = True
+        else:
+            self.is_far = False 
 
     def move(self, grid, dx, dy):
         # This is the same collision logic as the player
