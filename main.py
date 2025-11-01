@@ -2,7 +2,6 @@ import pygame
 from maze import *
 from player import *
 
-
 # --- Main Game Function ---
 def main():
     pygame.init()
