@@ -1,65 +1,25 @@
-class Cell:
-    def __init__(self, col, row):
-        self.col = col
-        self.row = row
-        self.walls = {'top': True, 'right': True, 'bottom': True, 'left': True}
-        self.visited = False
+import pygame
+import sys
+import random
+import math
+from cell import Cell
+from constants import *
 
-    def draw(self, screen):
-        x = self.col * CELL_SIZE
-        y = self.row * CELL_SIZE
-
-        # Fill visited cells with a different color
-        if self.visited:
-            pygame.draw.rect(screen, PURPLE, (x, y, CELL_SIZE, CELL_SIZE))
-
-        # Draw walls
-        if self.walls['top']:
-            pygame.draw.line(screen, WHITE, (x, y), (x + CELL_SIZE, y), 1)
-        if self.walls['right']:
-            pygame.draw.line(screen, WHITE, (x + CELL_SIZE, y), (x + CELL_SIZE, y + CELL_SIZE), 1)
-        if self.walls['bottom']:
-            pygame.draw.line(screen, WHITE, (x + CELL_SIZE, y + CELL_SIZE), (x, y + CELL_SIZE), 1)
-        if self.walls['left']:
-            pygame.draw.line(screen, WHITE, (x, y + CELL_SIZE), (x, y), 1)
-
-    def check_neighbors(self, grid):
-        neighbors = []
-        
-        # Check potential neighbors (top, right, bottom, left)
-        indices = [
-            (self.col, self.row - 1),  # Top
-            (self.col + 1, self.row),  # Right
-            (self.col, self.row + 1),  # Bottom
-            (self.col - 1, self.row)   # Left
-        ]
-
-        for c, r in indices:
-            if 0 <= c < COLS and 0 <= r < ROWS:
-                neighbor = grid[c][r]
-                if not neighbor.visited:
-                    neighbors.append(neighbor)
-        
-        if neighbors:
-            return random.choice(neighbors)
-        return None
-
-# --- Helper Function ---
+# --- Maze Generation Functions ---
 def remove_walls(current, next_cell):
     dx = current.col - next_cell.col
-    dy = current.row - next_cell.row
-
-    if dx == 1:  # Next cell is to the left
+    if dx == 1:
         current.walls['left'] = False
         next_cell.walls['right'] = False
-    elif dx == -1: # Next cell is to the right
+    elif dx == -1:
         current.walls['right'] = False
         next_cell.walls['left'] = False
     
-    if dy == 1:  # Next cell is above
+    dy = current.row - next_cell.row
+    if dy == 1:
         current.walls['top'] = False
         next_cell.walls['bottom'] = False
-    elif dy == -1: # Next cell is below
+    elif dy == -1:
         current.walls['bottom'] = False
         next_cell.walls['top'] = False
 
@@ -68,35 +28,75 @@ def gen_maze():
     stack = []
     current_cell = grid[0][0]
     current_cell.visited = True
-    stack.append(current_cell)
-    generation_complete = False
-
-    while not generation_complete:
-            current_cell.visited = True
-            
-            # Highlight the current "carver" cell
-            x = current_cell.col * CELL_SIZE
-            y = current_cell.row * CELL_SIZE
-            pygame.draw.rect(screen, GREEN, (x, y, CELL_SIZE, CELL_SIZE))
-
-            # Find a random unvisited neighbor
-            next_cell = current_cell.check_neighbors(grid)
-            
-            if next_cell:
-                # 1. Push current cell to stack
-                stack.append(current_cell)
-                # 2. Remove walls between current and next
-                remove_walls(current_cell, next_cell)
-                # 3. Move to the next cell
-                current_cell = next_cell
-            elif stack:
-                # Backtrack
-                current_cell = stack.pop()
-            else:
-                # Generation is finished!
-                generation_complete = True
-                # Create the entrance and exit
-                grid[0][0].walls['top'] = False
-                grid[COLS - 1][ROWS - 1].walls['bottom'] = False
     
+    generation_complete = False
+    while not generation_complete:
+        current_cell.visited = True
+        next_cell = current_cell.check_neighbors(grid)
+        
+        if next_cell:
+            stack.append(current_cell)
+            remove_walls(current_cell, next_cell)
+            current_cell = next_cell
+        elif stack:
+            current_cell = stack.pop()
+        else:
+            generation_complete = True
+
+    # Create the entrance and exit
+    grid[0][0].walls['top'] = False
+    grid[COLS - 1][ROWS - 1].walls['bottom'] = False
+    
+    print("Maze generation complete.")
     return grid
+
+def cast_rays(player , grid , camera_offset):
+    fov_points = []
+    player_center_world = player.get_center_pos()
+
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+
+    player_screen_x = player.pos[0] - camera_offset[0]
+    player_screen_y = player.pos[1] - camera_offset[1]
+
+    center_angle = math.atan2(mouse_y - player_screen_y, mouse_x - player_screen_x)
+
+    start_angle = center_angle - math.radians(FOV_ANGLE_DEGREES / 2)
+    angle_step = math.radians(FOV_ANGLE_DEGREES) / RAY_COUNT
+
+    fov_points.append(player_center_world)
+
+    for i in range(RAY_COUNT + 1):
+        current_angle = start_angle + i * angle_step
+        
+        step_x = math.cos(current_angle)
+        step_y = math.sin(current_angle)
+        
+        ray_x, ray_y = player_center_world
+        current_dist = 0
+        hit_wall = False
+        
+        while not hit_wall and current_dist < RAY_LENGTH:
+            current_dist += 1
+            ray_x = player_center_world[0] + step_x * current_dist
+            ray_y = player_center_world[1] + step_y * current_dist
+            
+            col = int(ray_x // CELL_SIZE)
+            row = int(ray_y // CELL_SIZE)
+            if not (0 <= col < COLS and 0 <= row < ROWS):
+                hit_wall = True
+                ray_x = max(0, min(ray_x, WORLD_WIDTH))
+                ray_y = max(0, min(ray_y, WORLD_HEIGHT))
+                break
+                
+            cell = grid[col][row]
+            for wall in cell.get_wall_rects():
+                if wall.collidepoint(ray_x, ray_y):
+                    hit_wall = True
+                    break
+            if hit_wall:
+                break
+        
+        fov_points.append((ray_x, ray_y))
+        
+    return fov_points
