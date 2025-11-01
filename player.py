@@ -31,6 +31,9 @@ class Player:
         new_x = self.pos[0] + dx * self.speed
         new_y = self.pos[1] + dy * self.speed
 
+        new_x = max(0 , new_x)
+        new_y = max(0 , new_y)
+
         # Create rects for X and Y separately
         new_rect_x = pygame.Rect(new_x, self.pos[1], self.size[0], self.size[1])
         new_rect_y = pygame.Rect(self.pos[0], new_y, self.size[0], self.size[1])

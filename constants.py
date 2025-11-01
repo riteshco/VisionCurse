@@ -5,9 +5,9 @@ PLAYER_SIZE = 40
 
 # Maze dimensions
 PLAYER_SPEED = 6
-CELL_SIZE = PLAYER_SIZE * 3  # Corridor size is 3x player size
+CELL_SIZE = PLAYER_SIZE * 6  # Corridor size is 3x player size
 WALL_THICKNESS = 3
-COLS = 40  # Number of columns in the maze
+COLS = 20  # Number of columns in the maze
 ROWS = 30  # Number of rows in the maze
 
 # Calculate total world size
@@ -26,8 +26,3 @@ RED = (255, 0, 0)         # Exit
 START_BLUE = (0, 0, 255)  # Start
 PURPLE = (40, 0, 80)      # Floor
 PLAYER_COLOR = (255, 100, 100) # Player
-
-# Player dimensions
-PLAYER_SIZE = 40
-CELL_SIZE = PLAYER_SIZE * 6
-WALL_THICKNESS = 3
