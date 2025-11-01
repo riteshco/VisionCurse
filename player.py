@@ -1,4 +1,6 @@
 import pygame
+import math
+import random
 from constants import *
 
 class Player:
@@ -8,13 +10,31 @@ class Player:
         self.health = 100
         self.speed = PLAYER_SPEED
 
+        self.inventory = ["flashlight", "shotgun"]
+        self.equipped_item = "flashlight"
+        
+        self.shotgun_ammo = SHOTGUN_AMMO_CAPACITY
+        self.is_reloading = False
+        self.reload_start_time = 0
+
     def render(self, screen, camera_offset):
         # Calculate screen position from world position
         screen_x = self.pos[0] - camera_offset[0]
         screen_y = self.pos[1] - camera_offset[1]
         
         # Draw player as a simple red square
-        pygame.draw.rect(screen, PLAYER_COLOR, (screen_x, screen_y, self.size[0], self.size[1]))
+        player_rect = pygame.Rect(screen_x, screen_y, self.size[0], self.size[1])
+        pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
+
+        item_size = self.size[0] * 0.5
+        item_rect = pygame.Rect(player_rect.centerx - item_size / 2, 
+                                player_rect.centery - item_size / 2, 
+                                item_size, item_size)
+        
+        if self.equipped_item == "flashlight":
+            pygame.draw.rect(screen, (255, 255, 0), item_rect, 3) # Yellow outline
+        elif self.equipped_item == "shotgun":
+            pygame.draw.rect(screen, (100, 100, 100), item_rect, 3) # Gray outline
 
     def get_rect(self):
         # Helper to get the player's collision rectangle
@@ -25,27 +45,98 @@ class Player:
     
     def get_aura_center(self , camera_offset):
         return [self.pos[0] - camera_offset[0] + self.size[0] / 2 , self.pos[1] - camera_offset[1] + self.size[1]/2]
-    # --- New Movement Function with Collisions ---
+
+    def update(self):
+        # --- NEW: Handle reload timer ---
+        if self.is_reloading:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.reload_start_time >= SHOTGUN_RELOAD_TIME:
+                self.shotgun_ammo = SHOTGUN_AMMO_CAPACITY
+                self.is_reloading = False
+                print("Reload complete.")
+    
+    def swap_item(self):
+        if self.is_reloading: # Don't swap while reloading
+            return
+            
+        if self.equipped_item == "flashlight":
+            self.equipped_item = "shotgun"
+        else:
+            self.equipped_item = "flashlight"
+        print(f"Equipped: {self.equipped_item}")
+
+    def shoot(self, target_angle, grid):
+        # --- NEW: Shotgun shooting logic ---
+        if self.equipped_item != "shotgun" or self.is_reloading:
+            return None
+        
+        if self.shotgun_ammo <= 0:
+            print("Out of ammo. Reloading...")
+            self.reload()
+            return None
+            
+        self.shotgun_ammo -= 1
+        pellet_lines = []
+        player_center_world = self.get_center_pos()
+
+        for _ in range(SHOTGUN_PELLET_COUNT):
+            # Calculate random angle within spread
+            angle = target_angle + math.radians(random.uniform(-SHOTGUN_SPREAD_ANGLE / 2, SHOTGUN_SPREAD_ANGLE / 2))
+            
+            step_x = math.cos(angle)
+            step_y = math.sin(angle)
+            
+            ray_x, ray_y = player_center_world
+            current_dist = 0
+            hit_wall = False
+            
+            # Cast ray
+            while not hit_wall and current_dist < SHOTGUN_RANGE:
+                current_dist += 1
+                ray_x = player_center_world[0] + step_x * current_dist
+                ray_y = player_center_world[1] + step_y * current_dist
+
+                col = int(ray_x // CELL_SIZE)
+                row = int(ray_y // CELL_SIZE)
+                if not (0 <= col < COLS and 0 <= row < ROWS):
+                    hit_wall = True # Hit world boundary
+                    break
+                    
+                cell = grid[col][row]
+                for wall in cell.get_wall_rects():
+                    if wall.collidepoint(ray_x, ray_y):
+                        hit_wall = True
+                        break
+                if hit_wall:
+                    break
+            
+            # Add the line to be drawn
+            pellet_lines.append((player_center_world, (ray_x, ray_y)))
+            
+        return pellet_lines
+
+    def reload(self):
+        if self.equipped_item == "shotgun" and not self.is_reloading and self.shotgun_ammo < SHOTGUN_AMMO_CAPACITY:
+            print("Reloading...")
+            self.is_reloading = True
+            self.reload_start_time = pygame.time.get_ticks()
+
     def move_player(self, grid, dx, dy):
-        # Calculate potential new position
         new_x = self.pos[0] + dx * self.speed
         new_y = self.pos[1] + dy * self.speed
 
         new_x = max(0 , new_x)
         new_y = max(0 , new_y)
 
-        # Create rects for X and Y separately
         new_rect_x = pygame.Rect(new_x, self.pos[1], self.size[0], self.size[1])
         new_rect_y = pygame.Rect(self.pos[0], new_y, self.size[0], self.size[1])
 
         can_move_x = True
         can_move_y = True
 
-        # Get player's current grid cell indices to check nearby walls
         current_col = int((self.pos[0] + self.size[0] / 2) // CELL_SIZE)
         current_row = int((self.pos[1] + self.size[1] / 2) // CELL_SIZE)
 
-        # Check a 3x3 area around the player for relevant walls
         for c in range(max(0, current_col - 1), min(COLS, current_col + 2)):
             for r in range(max(0, current_row - 1), min(ROWS, current_row + 2)):
                 cell = grid[c][r]
@@ -56,7 +147,6 @@ class Player:
                     if new_rect_y.colliderect(wall):
                         can_move_y = False
 
-        # Apply movement if allowed
         if can_move_x:
             self.pos[0] = new_x
         if can_move_y:
