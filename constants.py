@@ -3,14 +3,15 @@ import pygame
 WIN_WIDTH = 1920
 WIN_HEIGHT = 1080
 
-PLAYER_SIZE = 40
+PLAYER_SIZE = 20
+PLAYER_SPEED = 6
+PLAYER_MAX_HEALTH = 100
 
 # Maze dimensions
-PLAYER_SPEED = 6
 CELL_SIZE = PLAYER_SIZE * 6  # Corridor size is 3x player size
 WALL_THICKNESS = 3
-COLS = 20  # Number of columns in the maze
-ROWS = 30  # Number of rows in the maze
+COLS = 10  # Number of columns in the maze
+ROWS = 10  # Number of rows in the maze
 
 # Calculate total world size
 WORLD_WIDTH = COLS * CELL_SIZE
@@ -46,3 +47,16 @@ SHOTGUN_PELLET_LIFETIME = 100 # ms
 # --- Keybinds ---
 SWAP_KEY = pygame.K_q
 RELOAD_KEY = pygame.K_r
+
+IMPACT_SHAKE_DURATION = 100 # ms
+IMPACT_SHAKE_STRENGTH = 8
+
+ENEMY_COLOR = (0, 255, 0) # Green
+ENEMY_SIZE = 20
+ENEMY_SPEED = 2.5
+ENEMY_HEALTH = 50
+ENEMY_MELEE_DAMAGE = 10
+ENEMY_ATTACK_COOLDOWN = 1000 # 1 second
+ENEMY_DETECTION_RANGE = 250 # pixels
+ENEMY_SPAWN_INTERVAL = 1000 # 10 seconds
+ENEMY_MAX_COUNT = 5 # Max enemies on map

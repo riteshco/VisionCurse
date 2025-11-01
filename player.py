@@ -46,6 +46,12 @@ class Player:
     def get_aura_center(self , camera_offset):
         return [self.pos[0] - camera_offset[0] + self.size[0] / 2 , self.pos[1] - camera_offset[1] + self.size[1]/2]
 
+    def take_damage(self, amount):
+        self.health -= amount
+        if self.health < 0:
+            self.health = 0
+        print(f"Player took {amount} damage, health is now {self.health}")
+
     def update(self):
         # --- NEW: Handle reload timer ---
         if self.is_reloading:

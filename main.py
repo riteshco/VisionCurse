@@ -1,6 +1,8 @@
 import pygame
+import random
 from maze import *
 from player import *
+from enemy import *
 
 def create_light_aura(radius):
     surface = pygame.Surface((radius * 2, radius * 2))
@@ -25,6 +27,7 @@ def main():
     clock = pygame.time.Clock()
 
     ui_font = pygame.font.SysFont('Arial', 30)
+    game_over_font = pygame.font.SysFont('Arial', 100)
 
     # --- Pre-generate the maze ---
     grid = gen_maze()
@@ -40,11 +43,16 @@ def main():
 
     pellet_lines = []
     pellet_draw_start_time = 0
+
+    is_shaking = False
+    shake_start_time = 0 
+
+    enemies = []
+    last_enemy_spawn_time = pygame.time.get_ticks()
     
     # --- Camera Offset ---
     # This will store the [x, y] of the top-left corner of the camera
     camera_offset = [0, 0]
-
     move = {"Up": False, "Down": False, "Left": False, "Right": False}
 
     # Main game loop
@@ -58,7 +66,7 @@ def main():
                 running = False    
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1: # Left click
+                if event.button == 1 and player.health > 0: # Left click
                     mouse_x, mouse_y = pygame.mouse.get_pos()
                     player_screen_center = (player.pos[0] - camera_offset[0] , player.pos[1] - camera_offset[1])
                     target_angle = math.atan2(mouse_y - player_screen_center[1], 
@@ -68,6 +76,9 @@ def main():
                     if hits:
                         pellet_lines = hits
                         pellet_draw_start_time = current_time
+
+                        is_shaking = True
+                        shake_start_time = current_time
                 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -96,19 +107,55 @@ def main():
                 if event.key == pygame.K_a:
                     move["Left"] = False
 
-        # --- Player Movement ---
-        dx, dy = 0, 0
-        if move["Up"]:
-            dy = -1
-        if move["Down"]:
-            dy = 1
-        if move["Left"]:
-            dx = -1
-        if move["Right"]:
-            dx = 1
+        if player.health > 0:
+            # --- Player Movement ---
+            dx, dy = 0, 0
+            if move["Up"]: dy = -1
+            if move["Down"]: dy = 1
+            if move["Left"]: dx = -1
+            if move["Right"]: dx = 1
+            player.move_player(grid, dx, dy)
+            player.update() # Update reload timer
 
-        # Move player based on world coordinates
-        player.move_player(grid, dx, dy)
+            # --- NEW: Enemy Spawning ---
+            if current_time - last_enemy_spawn_time > ENEMY_SPAWN_INTERVAL:
+                if len(enemies) < ENEMY_MAX_COUNT:
+                    # Find a valid spawn point (not too close to player)
+                    player_col = int(player.get_center_pos()[0] // CELL_SIZE)
+                    player_row = int(player.get_center_pos()[1] // CELL_SIZE)
+                    
+                    spawn_col, spawn_row = player_col, player_row
+                    dist = 0
+                    while dist < 5: # Spawn at least 5 cells away
+                        spawn_col = random.randint(0, COLS - 1)
+                        spawn_row = random.randint(0, ROWS - 1)
+                        dist = math.dist((player_col, player_row), (spawn_col, spawn_row))
+                        
+                    spawn_x = spawn_col * CELL_SIZE + (CELL_SIZE / 2) - (ENEMY_SIZE / 2)
+                    spawn_y = spawn_row * CELL_SIZE + (CELL_SIZE / 2) - (ENEMY_SIZE / 2)
+                    
+                    enemies.append(Enemy([spawn_x, spawn_y], [ENEMY_SIZE, ENEMY_SIZE]))
+                    last_enemy_spawn_time = current_time
+            
+            # --- NEW: Update Enemies ---
+            for enemy in enemies:
+                enemy.update(player, grid)
+            
+            # --- NEW: Check pellet hits on enemies ---
+            if pellet_lines:
+                hit_enemies = []
+                for enemy in enemies:
+                    enemy_rect = enemy.get_rect()
+                    for start, end in pellet_lines:
+                        # Simple check: does the end of the pellet hit the enemy?
+                        if enemy_rect.collidepoint(end[0], end[1]):
+                            if enemy not in hit_enemies:
+                                hit_enemies.append(enemy)
+                
+                for enemy in hit_enemies:
+                    # (Later you can make them take damage)
+                    enemies.remove(enemy) 
+                    print("Enemy killed!")
 
         # --- Camera Update ---
         # Center the camera on the player's center
@@ -125,6 +172,11 @@ def main():
         camera_offset[0] = max(0, min(camera_offset[0], WORLD_WIDTH - WIN_WIDTH))
         camera_offset[1] = max(0, min(camera_offset[1], WORLD_HEIGHT - WIN_HEIGHT))
 
+        if is_shaking and current_time - shake_start_time < IMPACT_SHAKE_DURATION:
+            camera_offset[0] += random.randint(-IMPACT_SHAKE_STRENGTH, IMPACT_SHAKE_STRENGTH)
+            camera_offset[1] += random.randint(-IMPACT_SHAKE_STRENGTH, IMPACT_SHAKE_STRENGTH)
+        else:
+            is_shaking = False
 
         # --- Drawing ---
         screen.fill(BLACK)
@@ -140,6 +192,9 @@ def main():
         end_screen_x = ((COLS - 1) * CELL_SIZE) - camera_offset[0]
         end_screen_y = ((ROWS - 1) * CELL_SIZE) - camera_offset[1]
         pygame.draw.rect(screen, RED, (end_screen_x, end_screen_y, CELL_SIZE, CELL_SIZE))
+
+        for enemy in enemies:
+            enemy.render(screen, camera_offset)
 
         # Draw the player
         player.render(screen, camera_offset)
@@ -188,52 +243,19 @@ def main():
                         scaled_polygon.append((scaled_x, scaled_y))
                     
                     pygame.draw.polygon(light_surface, color, scaled_polygon)
-
-
-        # vision_polygon_screen = []
-        # for world_pos in vision_polygon_world:
-        #     screen_x = world_pos[0] - camera_offset[0]
-        #     screen_y = world_pos[1] - camera_offset[1]
-        #     vision_polygon_screen.append((screen_x, screen_y))
-
-        # if len(vision_polygon_screen) > 2:
-            
-        #     # Calculate brightness steps
-        #     base_c = FLASHLIGHT_BASE_BRIGHTNESS
-        #     max_c = FLASHLIGHT_MAX_BRIGHTNESS
-        #     steps = FLASHLIGHT_GRADIENT_STEPS
-            
-        #     # Get the points *without* the player center (which is at index 0)
-        #     ray_end_points = vision_polygon_screen[1:]
-            
-        #     for i in range(steps, 0, -1): # Draw from biggest (dimmest) to smallest (brightest)
-        #         scale = i / steps
-                
-        #         # Calculate color for this step (dimmest to brightest)
-        #         r = max_c[0] - (max_c[0] - base_c[0]) * scale
-        #         g = max_c[1] - (max_c[1] - base_c[1]) * scale
-        #         b = max_c[2] - (max_c[2] - base_c[2]) * scale
-        #         color = (int(r), int(g), int(b))
-
-        #         # Create the scaled polygon for this step
-        #         scaled_polygon = [player_screen_center] # Start at the player
-        #         for p in ray_end_points:
-        #             # Get vector from player to point
-        #             vec_x = p[0] - player_screen_center[0]
-        #             vec_y = p[1] - player_screen_center[1]
-                    
-        #             # Scale vector and add back to player center
-        #             scaled_x = player_screen_center[0] + vec_x * scale
-        #             scaled_y = player_screen_center[1] + vec_y * scale
-        #             scaled_polygon.append((scaled_x, scaled_y))
-                
-        #         # Draw the polygon
-        #         pygame.draw.polygon(light_surface, color, scaled_polygon)
         
         aura_rect = light_aura_sprite.get_rect(center=player_screen_center)
         light_surface.blit(light_aura_sprite, aura_rect, special_flags=pygame.BLEND_RGB_ADD)
 
         screen.blit(light_surface, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+
+        # UI Drawing
+
+        health_percent = player.health / PLAYER_MAX_HEALTH
+        bg_rect = pygame.Rect(10, 10, 300, 30)
+        fg_rect = pygame.Rect(10, 10, int(300 * health_percent), 30)
+        pygame.draw.rect(screen, (100,0,0), bg_rect) # Dark red background
+        pygame.draw.rect(screen, (0,200,0), fg_rect) # Bright green foreground
 
         if player.equipped_item == "shotgun":
             if player.is_reloading:
@@ -243,6 +265,20 @@ def main():
             
             text_surface = ui_font.render(ammo_text, True, WHITE)
             screen.blit(text_surface, (10, WIN_HEIGHT - 40))
+
+        if player.health <= 0:
+            text = game_over_font.render("YOU DIED", True, (150, 0, 0))
+            text_rect = text.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 2))
+            # Draw a semi-transparent black overlay
+            s = pygame.Surface((WIN_WIDTH, WIN_HEIGHT), pygame.SRCALPHA)
+            s.fill((0,0,0,150)) 
+            screen.blit(s, (0,0))
+            screen.blit(text, text_rect)
+            
+            # Freeze game and exit after a delay
+            pygame.display.flip()
+            pygame.time.wait(3000)
+            running = False
 
         # Update the display
         pygame.display.flip()
