@@ -10,8 +10,8 @@ PLAYER_MAX_HEALTH = 100
 # Maze dimensions
 CELL_SIZE = PLAYER_SIZE * 6  # Corridor size is 3x player size
 WALL_THICKNESS = 3
-COLS = 10  # Number of columns in the maze
-ROWS = 10  # Number of rows in the maze
+COLS = 30  # Number of columns in the maze
+ROWS = 30  # Number of rows in the maze
 
 # Calculate total world size
 WORLD_WIDTH = COLS * CELL_SIZE
