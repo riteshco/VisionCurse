@@ -1,8 +1,11 @@
 import pygame
 import random
+import math
+import multiprocessing as mp
 from maze import *
 from player import *
 from enemy import *
+from eye_tracker import run_eye_tracker
 
 def create_light_aura(radius):
     surface = pygame.Surface((radius * 2, radius * 2))
@@ -55,6 +58,19 @@ def main():
     current_max_enemies = ENEMY_MAX_COUNT
     current_detection_range = ENEMY_DETECTION_RANGE
 
+    pygame.mouse.set_visible(False)
+    aim_pos = (WIN_WIDTH // 2, WIN_HEIGHT // 2)
+
+    try:
+        aim_queue = mp.Queue()
+        eye_tracker_process = mp.Process(target=run_eye_tracker, args=(aim_queue,))
+        eye_tracker_process.start()
+    except Exception as e:
+        print(f"Failed to start eye tracker: {e}")
+        print("Falling back to mouse control.")
+        pygame.mouse.set_visible(True)
+        eye_tracker_process = None
+
     # --- Camera Offset ---
     # This will store the [x, y] of the top-left corner of the camera
     camera_offset = [0, 0]
@@ -65,6 +81,23 @@ def main():
     while running:
         current_time = pygame.time.get_ticks()
 
+        if eye_tracker_process:
+            try:
+                # Get the latest position from the queue, non-blocking
+                while not aim_queue.empty():
+                    pos = aim_queue.get_nowait()
+                    if pos is None: # Tracker process exited
+                        eye_tracker_process = None
+                        pygame.mouse.set_visible(True)
+                        break
+                    aim_pos = pos
+            except mp.queues.Empty:
+                pass # No new data, keep old aim_pos
+        else:
+            aim_pos = pygame.mouse.get_pos()
+            print("oh")
+        print(aim_pos)
+
         # --- Event Handling ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -72,10 +105,10 @@ def main():
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and player.health > 0: # Left click
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    # mouse_x, mouse_y = pygame.mouse.get_pos()
                     player_screen_center = (player.pos[0] - camera_offset[0] , player.pos[1] - camera_offset[1])
-                    target_angle = math.atan2(mouse_y - player_screen_center[1], 
-                                              mouse_x - player_screen_center[0])
+                    target_angle = math.atan2(aim_pos[1] - player_screen_center[1], 
+                                              aim_pos[0] - player_screen_center[0])
                     
                     hits = player.shoot(target_angle, grid)
                     if hits:
