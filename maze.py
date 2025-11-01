@@ -96,6 +96,8 @@ def cast_rays(player , grid , camera_offset):
                     break
             if hit_wall:
                 break
+        ray_x = max(0 , min(ray_x + step_x * WALL_THICKNESS , WORLD_WIDTH))
+        ray_y = max(0 , min(ray_y + step_y * WALL_THICKNESS , WORLD_HEIGHT))
         
         fov_points.append((ray_x, ray_y))
         
