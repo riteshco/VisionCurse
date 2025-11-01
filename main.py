@@ -58,18 +58,18 @@ def main():
     current_max_enemies = ENEMY_MAX_COUNT
     current_detection_range = ENEMY_DETECTION_RANGE
 
-    pygame.mouse.set_visible(False)
-    aim_pos = (WIN_WIDTH // 2, WIN_HEIGHT // 2)
-
+    pygame.mouse.set_visible(False) # Hide mouse
+    gaze_angle = 0.0 # This is the vector (angle) from the tracker
+    tracker_process = None
+    
     try:
         aim_queue = mp.Queue()
-        eye_tracker_process = mp.Process(target=run_eye_tracker, args=(aim_queue,))
-        eye_tracker_process.start()
+        tracker_process = mp.Process(target=run_eye_tracker, args=(aim_queue,))
+        tracker_process.start()
     except Exception as e:
         print(f"Failed to start eye tracker: {e}")
         print("Falling back to mouse control.")
         pygame.mouse.set_visible(True)
-        eye_tracker_process = None
 
     # --- Camera Offset ---
     # This will store the [x, y] of the top-left corner of the camera
@@ -81,22 +81,31 @@ def main():
     while running:
         current_time = pygame.time.get_ticks()
 
-        if eye_tracker_process:
+        if tracker_process:
             try:
-                # Get the latest position from the queue, non-blocking
+                # Get the latest angle from the queue
                 while not aim_queue.empty():
-                    pos = aim_queue.get_nowait()
-                    if pos is None: # Tracker process exited
-                        eye_tracker_process = None
+                    msg_type, data = aim_queue.get_nowait()
+                    if msg_type == "AIM":
+                        gaze_angle = data # data is now an angle (float)
+                    elif msg_type == "ERROR":
+                        print(f"EyeTracker ERROR: {data}")
+                        if tracker_process:
+                            tracker_process.terminate()
+                        tracker_process = None
                         pygame.mouse.set_visible(True)
-                        break
-                    aim_pos = pos
-            except mp.queues.Empty:
-                pass # No new data, keep old aim_pos
+                    elif msg_type == "STOPPED":
+                        tracker_process = None
+                        pygame.mouse.set_visible(True)
+                        
+            except Exception: # Catches queue.Empty
+                pass # No new data, keep old angle
         else:
-            aim_pos = pygame.mouse.get_pos()
-            print("oh")
-        print(aim_pos)
+            # Fallback to mouse
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            player_screen_center = (WIN_WIDTH // 2, WIN_HEIGHT // 2)
+            gaze_angle = math.atan2(mouse_y - player_screen_center[1], 
+                                    mouse_x - player_screen_center[0])
 
         # --- Event Handling ---
         for event in pygame.event.get():
@@ -104,13 +113,9 @@ def main():
                 running = False    
             
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and player.health > 0: # Left click
-                    # mouse_x, mouse_y = pygame.mouse.get_pos()
-                    player_screen_center = (player.pos[0] - camera_offset[0] , player.pos[1] - camera_offset[1])
-                    target_angle = math.atan2(aim_pos[1] - player_screen_center[1], 
-                                              aim_pos[0] - player_screen_center[0])
+                if event.button == 1 and player.health > 0:
                     
-                    hits = player.shoot(target_angle, grid)
+                    hits = player.shoot(gaze_angle, grid)
                     if hits:
                         pellet_lines = hits
                         pellet_draw_start_time = current_time
@@ -280,7 +285,7 @@ def main():
         player_screen_center = player.get_aura_center(camera_offset)
 
         if player.equipped_item == "flashlight":
-            vision_polygon_world = cast_rays(player, grid , player.fov_angle , camera_offset)
+            vision_polygon_world = cast_rays(player, grid , player.fov_angle, gaze_angle , camera_offset)
             vision_polygon_screen = []
             for world_pos in vision_polygon_world:
                 screen_x = world_pos[0] - camera_offset[0]
