@@ -208,4 +208,5 @@ class Player:
             self.shotgun_pellet_count = min(MAX_UPGRADABLE_PELLET_COUNT , self.shotgun_pellet_count + 1)
             print(f"Upgraded Shotgun pellet count to {self.shotgun_pellet_count}")
 
+        return True
 

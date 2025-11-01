@@ -51,6 +51,10 @@ def main():
     enemies = []
     last_enemy_spawn_time = pygame.time.get_ticks()
     
+    current_spawn_interval = ENEMY_SPAWN_INTERVAL
+    current_max_enemies = ENEMY_MAX_COUNT
+    current_detection_range = ENEMY_DETECTION_RANGE
+
     # --- Camera Offset ---
     # This will store the [x, y] of the top-left corner of the camera
     camera_offset = [0, 0]
@@ -106,9 +110,17 @@ def main():
                     elif event.key == UPGRADE_KEY_RELOAD:
                         player.upgrade('reload')
                     elif event.key == UPGRADE_KEY_FOV:
-                        player.upgrade('fov')
+                        if player.upgrade('fov'):
+                            current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
+                            current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
+                            current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
+                            print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                     elif event.key == UPGRADE_KEY_BRIGHTNESS:
-                        player.upgrade('brightness')
+                        if player.upgrade('brightness'):
+                            current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
+                            current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
+                            current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
+                            print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                     elif event.key == UPGRADE_PELLET_COUNT:
                         player.upgrade('pellet_count')
 
@@ -133,8 +145,8 @@ def main():
             player.update() # Update reload timer
 
             # --- NEW: Enemy Spawning ---
-            if current_time - last_enemy_spawn_time > ENEMY_SPAWN_INTERVAL:
-                if len(enemies) < ENEMY_MAX_COUNT:
+            if current_time - last_enemy_spawn_time > current_spawn_interval:
+                if len(enemies) < current_max_enemies:
                     # Find a valid spawn point (not too close to player)
                     player_col = int(player.get_center_pos()[0] // CELL_SIZE)
                     player_row = int(player.get_center_pos()[1] // CELL_SIZE)
@@ -154,7 +166,7 @@ def main():
             
             # --- NEW: Update Enemies ---
             for enemy in enemies:
-                enemy.update(player, grid)
+                enemy.update(player, grid , current_detection_range)
             
             # --- NEW: Check pellet hits on enemies ---
             if pellet_lines:
@@ -166,6 +178,7 @@ def main():
                     for start, end in pellet_lines:
                         if enemy_rect.clipline(start, end):
                             pellets_hit += 1
+
                     print(pellets_hit)
                     if pellets_hit > 0:
                         is_dead = enemy.take_damage(pellets_hit * SHOTGUN_PELLET_DAMAGE)

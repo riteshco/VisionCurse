@@ -32,14 +32,14 @@ class Enemy:
             return True # Return True if dead
         return False
 
-    def update(self, player, grid):
+    def update(self, player, grid , current_detection_range):
         player_center = player.get_center_pos()
         self_center = self.get_center_pos()
 
         dist = math.dist(player_center, self_center)
 
         # --- AI Logic ---
-        if dist < ENEMY_DETECTION_RANGE:
+        if dist < current_detection_range:
             # 1. Move towards player
             dx = player_center[0] - self_center[0]
             dy = player_center[1] - self_center[1]
