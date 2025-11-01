@@ -27,6 +27,7 @@ def main():
     clock = pygame.time.Clock()
 
     ui_font = pygame.font.SysFont('Arial', 30)
+    upgrade_font = pygame.font.SysFont('Arial', 22)
     game_over_font = pygame.font.SysFont('Arial', 100)
 
     # --- Pre-generate the maze ---
@@ -81,21 +82,35 @@ def main():
                         shake_start_time = current_time
                 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                if event.key == pygame.K_s:
-                    move["Down"] = True
-                if event.key == pygame.K_w:
-                    move["Up"] = True
-                if event.key == pygame.K_d:
-                    move["Right"] = True
-                if event.key == pygame.K_a:
-                    move["Left"] = True
-                
-                if event.key == SWAP_KEY:
-                    player.swap_item()
-                if event.key == RELOAD_KEY:
-                    player.reload()
+                if player.health > 0:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                    if event.key == pygame.K_s:
+                        move["Down"] = True
+                    if event.key == pygame.K_w:
+                        move["Up"] = True
+                    if event.key == pygame.K_d:
+                        move["Right"] = True
+                    if event.key == pygame.K_a:
+                        move["Left"] = True
+
+                    if event.key == SWAP_KEY:
+                        player.swap_item()
+                    if event.key == RELOAD_KEY:
+                        player.reload()
+                    
+                    if event.key == UPGRADE_KEY_HEALTH:
+                        player.upgrade('health')
+                    elif event.key == UPGRADE_KEY_AMMO:
+                        player.upgrade('ammo')
+                    elif event.key == UPGRADE_KEY_RELOAD:
+                        player.upgrade('reload')
+                    elif event.key == UPGRADE_KEY_FOV:
+                        player.upgrade('fov')
+                    elif event.key == UPGRADE_KEY_BRIGHTNESS:
+                        player.upgrade('brightness')
+                    elif event.key == UPGRADE_PELLET_COUNT:
+                        player.upgrade('pellet_count')
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_s:
@@ -143,19 +158,25 @@ def main():
             
             # --- NEW: Check pellet hits on enemies ---
             if pellet_lines:
-                hit_enemies = []
+                # Use list comprehension to build a list of dead enemies
+                dead_enemies = []
                 for enemy in enemies:
                     enemy_rect = enemy.get_rect()
+                    pellets_hit = 0
                     for start, end in pellet_lines:
-                        # Simple check: does the end of the pellet hit the enemy?
-                        if enemy_rect.collidepoint(end[0], end[1]):
-                            if enemy not in hit_enemies:
-                                hit_enemies.append(enemy)
+                        if enemy_rect.clipline(start, end):
+                            pellets_hit += 1
+                    print(pellets_hit)
+                    if pellets_hit > 0:
+                        is_dead = enemy.take_damage(pellets_hit * SHOTGUN_PELLET_DAMAGE)
+                        if is_dead:
+                            dead_enemies.append(enemy)
                 
-                for enemy in hit_enemies:
-                    # (Later you can make them take damage)
+                # Remove dead enemies and grant skill points
+                for enemy in dead_enemies:
                     enemies.remove(enemy) 
-                    print("Enemy killed!")
+                    player.add_skill_points(ENEMY_KILL_REWARD)
+                    print(f"Enemy killed! Player has {player.skill_points} points.")
 
         # --- Camera Update ---
         # Center the camera on the player's center
@@ -209,12 +230,11 @@ def main():
 
         light_surface.fill(BLACK)
 
-        vision_polygon_world = cast_rays(player, grid , camera_offset)
 
         player_screen_center = player.get_aura_center(camera_offset)
 
         if player.equipped_item == "flashlight":
-            vision_polygon_world = cast_rays(player, grid , camera_offset)
+            vision_polygon_world = cast_rays(player, grid , player.fov_angle , camera_offset)
             vision_polygon_screen = []
             for world_pos in vision_polygon_world:
                 screen_x = world_pos[0] - camera_offset[0]
@@ -223,7 +243,7 @@ def main():
 
             if len(vision_polygon_screen) > 2:
                 base_c = FLASHLIGHT_BASE_BRIGHTNESS
-                max_c = FLASHLIGHT_MAX_BRIGHTNESS
+                max_c = player.flashlight_brightness
                 steps = FLASHLIGHT_GRADIENT_STEPS
                 ray_end_points = vision_polygon_screen[1:]
                 
@@ -265,6 +285,29 @@ def main():
             
             text_surface = ui_font.render(ammo_text, True, WHITE)
             screen.blit(text_surface, (10, WIN_HEIGHT - 40))
+        
+        sp_text = ui_font.render(f"Skill Points: {player.skill_points}", True, WHITE)
+        sp_rect = sp_text.get_rect(right=WIN_WIDTH - sp_text.get_width(), top=10)
+        screen.blit(sp_text, sp_rect)
+
+        if player.skill_points > 0:
+            y_offset = 50
+            menu_title = upgrade_font.render("Upgrades Available (Cost: 1)", True, (255, 255, 0))
+            screen.blit(menu_title, (sp_rect.left, y_offset))
+            y_offset += 30
+            
+            upgrades = [
+                f"[1] Max Health (+{UPGRADE_HEALTH_AMOUNT})",
+                f"[2] Ammo Capacity (+{UPGRADE_AMMO_AMOUNT})",
+                f"[3] Reload Speed (-{UPGRADE_RELOAD_SPEED_AMOUNT}ms)",
+                f"[4] Flashlight Angle (+{UPGRADE_FOV_AMOUNT})",
+                f"[5] Flashlight Brightness",
+                f"[6] Shotgun Pellet count"
+            ]
+            for text in upgrades:
+                text_surf = upgrade_font.render(text, True, WHITE)
+                screen.blit(text_surf, (sp_rect.left, y_offset))
+                y_offset += 25
 
         if player.health <= 0:
             text = game_over_font.render("YOU DIED", True, (150, 0, 0))

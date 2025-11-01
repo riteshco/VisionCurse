@@ -25,6 +25,13 @@ class Enemy:
     def get_center_pos(self):
         return [self.pos[0] + self.size[0] / 2, self.pos[1] + self.size[1] / 2]
 
+    def take_damage(self, amount):
+        self.health -= amount
+        if self.health <= 0:
+            self.health = 0
+            return True # Return True if dead
+        return False
+
     def update(self, player, grid):
         player_center = player.get_center_pos()
         self_center = self.get_center_pos()

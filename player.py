@@ -12,7 +12,18 @@ class Player:
 
         self.inventory = ["flashlight", "shotgun"]
         self.equipped_item = "flashlight"
+
+        self.max_health = PLAYER_MAX_HEALTH
+        self.health = self.max_health
+        self.shotgun_ammo_capacity = SHOTGUN_AMMO_CAPACITY
+        self.shotgun_ammo = self.shotgun_ammo_capacity
+        self.shotgun_reload_time = SHOTGUN_RELOAD_TIME
+        self.fov_angle = FOV_ANGLE_DEGREES
+        self.flashlight_brightness = FLASHLIGHT_MAX_BRIGHTNESS
+        self.shotgun_pellet_count = SHOTGUN_PELLET_COUNT
         
+        self.skill_points = 0
+
         self.shotgun_ammo = SHOTGUN_AMMO_CAPACITY
         self.is_reloading = False
         self.reload_start_time = 0
@@ -85,7 +96,7 @@ class Player:
         pellet_lines = []
         player_center_world = self.get_center_pos()
 
-        for _ in range(SHOTGUN_PELLET_COUNT):
+        for _ in range(self.shotgun_pellet_count):
             # Calculate random angle within spread
             angle = target_angle + math.radians(random.uniform(-SHOTGUN_SPREAD_ANGLE / 2, SHOTGUN_SPREAD_ANGLE / 2))
             
@@ -157,4 +168,44 @@ class Player:
             self.pos[0] = new_x
         if can_move_y:
             self.pos[1] = new_y
+    
+    def add_skill_points(self, amount):
+        self.skill_points += amount
+        print(f"Gained {amount} skill points! Total: {self.skill_points}")
+
+    def upgrade(self, upgrade_type):
+        if self.skill_points < SKILL_POINT_COST:
+            print("Not enough skill points!")
+            return
+
+        self.skill_points -= SKILL_POINT_COST
+        
+        if upgrade_type == 'health':
+            self.max_health += UPGRADE_HEALTH_AMOUNT
+            self.health = self.max_health # Full heal on upgrade
+            print(f"Upgraded Max Health to {self.max_health}")
+            
+        elif upgrade_type == 'ammo':
+            self.shotgun_ammo_capacity += UPGRADE_AMMO_AMOUNT
+            self.shotgun_ammo = self.shotgun_ammo_capacity # Refill ammo
+            print(f"Upgraded Ammo Capacity to {self.shotgun_ammo_capacity}")
+
+        elif upgrade_type == 'reload':
+            self.shotgun_reload_time = max(500, self.shotgun_reload_time - UPGRADE_RELOAD_SPEED_AMOUNT) # 0.5s min
+            print(f"Upgraded Reload Speed to {self.shotgun_reload_time}ms")
+
+        elif upgrade_type == 'fov':
+            self.fov_angle += UPGRADE_FOV_AMOUNT
+            print(f"Upgraded Flashlight Angle to {self.fov_angle}")
+            
+        elif upgrade_type == 'brightness':
+            b = self.flashlight_brightness
+            up = UPGRADE_BRIGHTNESS_AMOUNT
+            self.flashlight_brightness = (min(255, b[0] + up[0]), min(255, b[1] + up[1]), min(255, b[2] + up[2]))
+            print(f"Upgraded Flashlight Brightness to {self.flashlight_brightness}")
+        
+        elif upgrade_type == 'pellet_count':
+            self.shotgun_pellet_count = min(MAX_UPGRADABLE_PELLET_COUNT , self.shotgun_pellet_count + 1)
+            print(f"Upgraded Shotgun pellet count to {self.shotgun_pellet_count}")
+
 

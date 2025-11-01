@@ -50,7 +50,7 @@ def gen_maze():
     print("Maze generation complete.")
     return grid
 
-def cast_rays(player , grid , camera_offset):
+def cast_rays(player , grid , fov_angle , camera_offset):
     fov_points = []
     player_center_world = player.get_center_pos()
 
@@ -61,8 +61,8 @@ def cast_rays(player , grid , camera_offset):
 
     center_angle = math.atan2(mouse_y - player_screen_y, mouse_x - player_screen_x)
 
-    start_angle = center_angle - math.radians(FOV_ANGLE_DEGREES / 2)
-    angle_step = math.radians(FOV_ANGLE_DEGREES) / RAY_COUNT
+    start_angle = center_angle - math.radians(fov_angle / 2)
+    angle_step = math.radians(fov_angle) / RAY_COUNT
 
     fov_points.append(player_center_world)
 
