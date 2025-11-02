@@ -50,7 +50,7 @@ def gen_maze():
     print("Maze generation complete.")
     return grid
 
-def cast_rays(player , grid , fov_angle , camera_offset):
+def cast_rays(player , grid , fov_angle , camera_offset, is_boss_fight=False):
     fov_points = []
     player_center_world = player.get_center_pos()
 
@@ -81,23 +81,45 @@ def cast_rays(player , grid , fov_angle , camera_offset):
             ray_x = player_center_world[0] + step_x * current_dist
             ray_y = player_center_world[1] + step_y * current_dist
             
-            col = int(ray_x // CELL_SIZE)
-            row = int(ray_y // CELL_SIZE)
-            if not (0 <= col < COLS and 0 <= row < ROWS):
-                hit_wall = True
-                ray_x = max(0, min(ray_x, WORLD_WIDTH))
-                ray_y = max(0, min(ray_y, WORLD_HEIGHT))
-                break
-                
-            cell = grid[col][row]
-            for wall in cell.get_wall_rects():
-                if wall.collidepoint(ray_x, ray_y):
+            # --- NEW LOGIC: Check state ---
+            if is_boss_fight:
+                # In boss fight, check arena boundaries
+                if (ray_x < ARENA_WALL_THICKNESS or ray_x > ARENA_WIDTH - ARENA_WALL_THICKNESS or
+                    ray_y < ARENA_WALL_THICKNESS or ray_y > ARENA_HEIGHT - ARENA_WALL_THICKNESS):
                     hit_wall = True
-                    break
+            else:
+                # --- ORIGINAL LOGIC: Check maze grid ---
+                col = int(ray_x // CELL_SIZE)
+                row = int(ray_y // CELL_SIZE)
+                
+                # This is the original boundary check
+                if not (0 <= col < COLS and 0 <= row < ROWS):
+                    hit_wall = True
+                    ray_x = max(0, min(ray_x, WORLD_WIDTH))
+                    ray_y = max(0, min(ray_y, WORLD_HEIGHT))
+                    break # Break from the while loop
+                    
+                # This part is now safe because of the check above
+                cell = grid[col][row]
+                for wall in cell.get_wall_rects():
+                    if wall.collidepoint(ray_x, ray_y):
+                        hit_wall = True
+                        break # Break from the for loop
+            # --- END NEW LOGIC ---
+
             if hit_wall:
-                break
-        ray_x = max(0 , min(ray_x + step_x * WALL_THICKNESS , WORLD_WIDTH))
-        ray_y = max(0 , min(ray_y + step_y * WALL_THICKNESS , WORLD_HEIGHT))
+                break # Break from the while loop
+        
+        # --- NEW: Clamp final ray position based on state ---
+        if is_boss_fight:
+            # Clamp to arena boundaries
+            ray_x = max(ARENA_WALL_THICKNESS , min(ray_x, ARENA_WIDTH - ARENA_WALL_THICKNESS))
+            ray_y = max(ARENA_WALL_THICKNESS , min(ray_y, ARENA_HEIGHT - ARENA_WALL_THICKNESS))
+        else:
+            # Original maze logic
+            ray_x = max(0 , min(ray_x + step_x * WALL_THICKNESS , WORLD_WIDTH))
+            ray_y = max(0 , min(ray_y + step_y * WALL_THICKNESS , WORLD_HEIGHT))
+        # --- END NEW LOGIC ---
         
         fov_points.append((ray_x, ray_y))
         

@@ -83,7 +83,7 @@ class Player:
         swap_sound.play()
         print(f"Equipped: {self.equipped_item}")
 
-    def shoot(self, target_angle, grid , fire_sound , reload_sound):
+    def shoot(self, target_angle, grid , fire_sound , reload_sound , is_boss_fight=False):
         # --- NEW: Shotgun shooting logic ---
         if self.equipped_item != "shotgun" or self.is_reloading:
             return None
@@ -115,17 +115,25 @@ class Player:
                 ray_x = player_center_world[0] + step_x * current_dist
                 ray_y = player_center_world[1] + step_y * current_dist
 
-                col = int(ray_x // CELL_SIZE)
-                row = int(ray_y // CELL_SIZE)
-                if not (0 <= col < COLS and 0 <= row < ROWS):
-                    hit_wall = True # Hit world boundary
-                    break
-                    
-                cell = grid[col][row]
-                for wall in cell.get_wall_rects():
-                    if wall.collidepoint(ray_x, ray_y):
+                if is_boss_fight:
+                    # In boss fight, only check arena boundaries
+                    if (ray_x < ARENA_WALL_THICKNESS or ray_x > ARENA_WIDTH - ARENA_WALL_THICKNESS or
+                        ray_y < ARENA_WALL_THICKNESS or ray_y > ARENA_HEIGHT - ARENA_WALL_THICKNESS):
                         hit_wall = True
+                else:
+                    # In maze, check grid
+                    col = int(ray_x // CELL_SIZE)
+                    row = int(ray_y // CELL_SIZE)
+                    if not (0 <= col < COLS and 0 <= row < ROWS):
+                        hit_wall = True # Hit world boundary
                         break
+                        
+                    cell = grid[col][row]
+                    for wall in cell.get_wall_rects():
+                        if wall.collidepoint(ray_x, ray_y):
+                            hit_wall = True
+                            break
+                
                 if hit_wall:
                     break
             
@@ -171,6 +179,17 @@ class Player:
             self.pos[0] = new_x
         if can_move_y:
             self.pos[1] = new_y
+    
+    def move_player_arena(self, dx, dy):
+        new_x = self.pos[0] + dx * self.speed
+        new_y = self.pos[1] + dy * self.speed
+
+        # Clamp to arena walls
+        new_x = max(ARENA_WALL_THICKNESS, min(new_x, ARENA_WIDTH - self.size[0] - ARENA_WALL_THICKNESS))
+        new_y = max(ARENA_WALL_THICKNESS, min(new_y, ARENA_HEIGHT - self.size[1] - ARENA_WALL_THICKNESS))
+        
+        self.pos[0] = new_x
+        self.pos[1] = new_y
     
     def add_skill_points(self, amount , add_sound):
         self.skill_points += amount
