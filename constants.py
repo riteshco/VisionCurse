@@ -98,18 +98,18 @@ ARENA_WIDTH = WIN_WIDTH * 2
 ARENA_HEIGHT = WIN_HEIGHT * 2
 ARENA_WALL_THICKNESS = 50
 
-SOUND_SHOTGUN_FIRE = "sounds/shotgun_fire.mp3"
+SOUND_SHOTGUN_FIRE = "sounds/oh-bs-garv.mp3"
 SOUND_SHOTGUN_RELOAD = "sounds/shotgun_reload.mp3"
 SOUND_SWAP_ITEM = "sounds/swap_item.mp3"
-SOUND_PLAYER_MOVE = "sounds/footsteps.mp3" # Should be a short, looping sound
+SOUND_PLAYER_MOVE = "sounds/ahh-ma-ka-garv.mp3" # Should be a short, looping sound
 SOUND_ENEMY_ATTACK = "sounds/enemy_attack.mp3"
-SOUND_ENEMY_ALERT = "sounds/enemy_alert.mp3" # Bonus: play when they spot player
+SOUND_ENEMY_ALERT = "sounds/puchh-garv.mp3" # Bonus: play when they spot player
 SOUND_SKILL_UPGRADE = "sounds/skill_upgrade.mp3"
 SOUND_SKILL_GAIN = "sounds/skill_gain.mp3"
 MUSIC_BACKGROUND = "sounds/background_music.mp3"
 
-SOUND_BOSS_HIT = "sounds/boss_hit.mp3"
+SOUND_BOSS_HIT = "sounds/shaa-satindra.mp3"
 SOUND_BOSS_DEATH = "sounds/boss_death.mp3"
 SOUND_BOSS_ATTACK = "sounds/boss_attack.mp3"
-MUSIC_BOSS_FIGHT = "sounds/boss_music.mp3"
+MUSIC_BOSS_FIGHT = "sounds/epic-dialogue-garv.mp3"
 SOUND_WIN_GAME = "sounds/win_game.mp3"

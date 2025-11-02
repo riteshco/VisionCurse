@@ -28,14 +28,60 @@ class Player:
         self.is_reloading = False
         self.reload_start_time = 0
 
+        try:
+            # Load idle images
+            self.idle_image_right = pygame.image.load('images/player_idle.png').convert_alpha()
+            # Create the left-facing idle image by flipping the right-facing one
+            self.idle_image_left = pygame.transform.flip(self.idle_image_right, True, False)
+
+            # Load walking images
+            self.walk_right_frames = [
+                pygame.image.load('images/player_right1.png').convert_alpha(),
+                pygame.image.load('images/player_right2.png').convert_alpha(),
+                pygame.image.load('images/player_right3.png').convert_alpha(),
+                pygame.image.load('images/player_right4.png').convert_alpha()
+            ]
+            self.walk_left_frames = [
+                pygame.image.load('images/player_left1.png').convert_alpha(),
+                pygame.image.load('images/player_left2.png').convert_alpha(),
+                pygame.image.load('images/player_left3.png').convert_alpha(),
+                pygame.image.load('images/player_left4.png').convert_alpha()
+            ]
+            
+            # --- Optional: Scale images to match your PLAYER_SIZE ---
+            self.idle_image_right = pygame.transform.scale(self.idle_image_right, (self.size[0], self.size[1]))
+            self.idle_image_left = pygame.transform.scale(self.idle_image_left, (self.size[0], self.size[1]))
+            
+            self.walk_right_frames = [pygame.transform.scale(img, (self.size[0], self.size[1])) for img in self.walk_right_frames]
+            self.walk_left_frames = [pygame.transform.scale(img, (self.size[0], self.size[1])) for img in self.walk_left_frames]
+            
+        except pygame.error as e:
+            print(f"Error loading player images: {e}")
+            # Fallback to a simple surface if images are missing
+            self.idle_image_right = pygame.Surface(self.size)
+            self.idle_image_right.fill(PLAYER_COLOR)
+            self.idle_image_left = self.idle_image_right
+            self.walk_right_frames = [self.idle_image_right] * 4
+            self.walk_left_frames = [self.idle_image_right] * 4
+
+        # 2. Animation state variables
+        self.current_frame = 0
+        self.last_anim_update = 0
+        self.anim_speed_ms = 150 # Time between frames (in milliseconds)
+        self.facing_right = True # Track direction for idle
+
+        # 3. This is the image that will be drawn
+        self.image = self.idle_image_right
+
     def render(self, screen, camera_offset):
         # Calculate screen position from world position
         screen_x = self.pos[0] - camera_offset[0]
         screen_y = self.pos[1] - camera_offset[1]
         
         # Draw player as a simple red square
+        screen.blit(self.image, (screen_x, screen_y))
         player_rect = pygame.Rect(screen_x, screen_y, self.size[0], self.size[1])
-        pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
+        # pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
 
         item_size = self.size[0] * 0.5
         item_rect = pygame.Rect(player_rect.centerx - item_size / 2, 
