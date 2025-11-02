@@ -160,6 +160,8 @@ def main():
     fade_alpha = 0
     fading_to_state = -1 # State to go to after fading
 
+    flashlight_max_trade_off = FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
+
     # Main game loop
     running = True
     while running:
@@ -229,14 +231,16 @@ def main():
                                 sounds['skill_upgrade'].play()
                                 if player.upgrade('fov'):
                                     current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
-                                    current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
+                                    current_max_enemies += flashlight_max_trade_off
+                                    flashlight_max_trade_off *= 2
                                     current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
                                     print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                             elif event.key == UPGRADE_KEY_BRIGHTNESS:
                                 sounds['skill_upgrade'].play()
                                 if player.upgrade('brightness'):
                                     current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
-                                    current_max_enemies += FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
+                                    current_max_enemies += flashlight_max_trade_off
+                                    flashlight_max_trade_off *= 2
                                     current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
                                     print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
                             elif event.key == UPGRADE_PELLET_COUNT:
@@ -275,7 +279,7 @@ def main():
                     footstep_channel.stop()
                 
                 player.move_player(grid, dx, dy)
-                player.update() 
+                player.update(move , camera_offset) 
 
                 # --- Enemy Spawning ---
                 if current_time - last_enemy_spawn_time > current_spawn_interval:
@@ -285,7 +289,7 @@ def main():
                         player_row = int(player.get_center_pos()[1] // CELL_SIZE)
                         spawn_col, spawn_row = player_col, player_row
                         dist = 0
-                        while dist < 5:
+                        while dist < 5 or dist > 7:
                             spawn_col = random.randint(0, COLS - 1)
                             spawn_row = random.randint(0, ROWS - 1)
                             dist = math.dist((player_col, player_row), (spawn_col, spawn_row))
@@ -354,7 +358,7 @@ def main():
                     footstep_channel.stop()
                 
                 player.move_player_arena(dx, dy) # <-- Use new move function
-                player.update() 
+                player.update(move , camera_offset) 
 
                 # --- Update Boss ---
                 if boss:
@@ -472,7 +476,7 @@ def main():
                         vision_polygon_screen.append((screen_x, screen_y))
 
                     if len(vision_polygon_screen) > 2:
-                        base_c = FLASHLIGHT_BASE_BRIGHTNESS
+                        base_c = player.flashlight_base_brightness
                         max_c = player.flashlight_brightness
                         steps = FLASHLIGHT_GRADIENT_STEPS
                         ray_end_points = vision_polygon_screen[1:]
@@ -517,7 +521,7 @@ def main():
             
             if game_state == GAME_STATE_PLAYING:
                 sp_text = ui_font.render(f"Skill Points: {player.skill_points}", True, WHITE)
-                sp_rect = sp_text.get_rect(right=WIN_WIDTH - 10, top=10)
+                sp_rect = sp_text.get_rect(right=WIN_WIDTH - sp_text.get_width(), top=10)
                 screen.blit(sp_text, sp_rect)
                 if player.skill_points > 0:
                     # ... (upgrade UI logic) ...

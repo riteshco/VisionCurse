@@ -21,6 +21,7 @@ class Player:
         self.fov_angle = FOV_ANGLE_DEGREES
         self.flashlight_brightness = FLASHLIGHT_MAX_BRIGHTNESS
         self.shotgun_pellet_count = SHOTGUN_PELLET_COUNT
+        self.flashlight_base_brightness = FLASHLIGHT_BASE_BRIGHTNESS
         
         self.skill_points = 0
 
@@ -30,23 +31,26 @@ class Player:
 
         try:
             # Load idle images
-            self.idle_image_right = pygame.image.load('images/player_idle.png').convert_alpha()
+            self.idle_image_right = pygame.image.load('images/improved_images/player_idle.png').convert_alpha()
             # Create the left-facing idle image by flipping the right-facing one
             self.idle_image_left = pygame.transform.flip(self.idle_image_right, True, False)
 
             # Load walking images
             self.walk_right_frames = [
-                pygame.image.load('images/player_right1.png').convert_alpha(),
-                pygame.image.load('images/player_right2.png').convert_alpha(),
-                pygame.image.load('images/player_right3.png').convert_alpha(),
-                pygame.image.load('images/player_right4.png').convert_alpha()
+                pygame.image.load('images/improved_images/player_right1.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_right2.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_right3.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_right4.png').convert_alpha()
             ]
             self.walk_left_frames = [
-                pygame.image.load('images/player_left1.png').convert_alpha(),
-                pygame.image.load('images/player_left2.png').convert_alpha(),
-                pygame.image.load('images/player_left3.png').convert_alpha(),
-                pygame.image.load('images/player_left4.png').convert_alpha()
+                pygame.image.load('images/improved_images/player_left1.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_left2.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_left3.png').convert_alpha(),
+                pygame.image.load('images/improved_images/player_left4.png').convert_alpha()
             ]
+
+            self.shotgun_original_image = pygame.image.load(SHOTGUN_SPRITE_PATH).convert_alpha()
+            self.flashlight_original_image = pygame.image.load(FLASHLIGHT_SPRITE_PATH).convert_alpha()
             
             # --- Optional: Scale images to match your PLAYER_SIZE ---
             self.idle_image_right = pygame.transform.scale(self.idle_image_right, (self.size[0], self.size[1]))
@@ -54,6 +58,17 @@ class Player:
             
             self.walk_right_frames = [pygame.transform.scale(img, (self.size[0], self.size[1])) for img in self.walk_right_frames]
             self.walk_left_frames = [pygame.transform.scale(img, (self.size[0], self.size[1])) for img in self.walk_left_frames]
+
+
+
+            shotgun_size = (int(self.size[0] * 1.5), int(self.size[1] * 0.75))
+            self.shotgun_original_image = pygame.transform.scale(self.shotgun_original_image, shotgun_size)
+            self.shotgun_original_left = pygame.transform.flip(self.shotgun_original_image, False, True)
+
+
+            flashlight_size = (int(self.size[0] * 1.2), int(self.size[1] * 0.6))
+            self.flashlight_original_image = pygame.transform.scale(self.flashlight_original_image, flashlight_size)
+            self.flashlight_original_left = pygame.transform.flip(self.flashlight_original_image, False, True)
             
         except pygame.error as e:
             print(f"Error loading player images: {e}")
@@ -64,6 +79,9 @@ class Player:
             self.walk_right_frames = [self.idle_image_right] * 4
             self.walk_left_frames = [self.idle_image_right] * 4
 
+            self.flashlight_original_image = pygame.Surface((20,10)); self.flashlight_original_image.fill((255,255,0))
+            self.flashlight_original_left = self.flashlight_original_image
+
         # 2. Animation state variables
         self.current_frame = 0
         self.last_anim_update = 0
@@ -72,6 +90,11 @@ class Player:
 
         # 3. This is the image that will be drawn
         self.image = self.idle_image_right
+
+        self.shotgun_image = self.shotgun_original_image
+        self.flashlight_image = self.flashlight_original_image
+        self.weapon_angle = 0 # Use one angle for both
+        self.weapon_pivot_offset = [5, 3]
 
     def render(self, screen, camera_offset):
         # Calculate screen position from world position
@@ -87,11 +110,20 @@ class Player:
         item_rect = pygame.Rect(player_rect.centerx - item_size / 2, 
                                 player_rect.centery - item_size / 2, 
                                 item_size, item_size)
+
+        # Calculate the shotgun's screen rect based on the rotated image
+        player_screen_center = self.get_aura_center(camera_offset)
         
-        if self.equipped_item == "flashlight":
-            pygame.draw.rect(screen, (255, 255, 0), item_rect, 3) # Yellow outline
-        elif self.equipped_item == "shotgun":
-            pygame.draw.rect(screen, (100, 100, 100), item_rect, 3) # Gray outline
+        # Adjust pivot based on facing direction
+        pivot = (player_screen_center[0] - self.weapon_pivot_offset[0], player_screen_center[1] + self.weapon_pivot_offset[1])
+            
+        if self.equipped_item == "shotgun":
+            shotgun_screen_rect = self.shotgun_image.get_rect(center=pivot)
+            screen.blit(self.shotgun_image, shotgun_screen_rect)
+            
+        elif self.equipped_item == "flashlight":
+            flashlight_screen_rect = self.flashlight_image.get_rect(center=pivot)
+            screen.blit(self.flashlight_image, flashlight_screen_rect)
 
     def get_rect(self):
         # Helper to get the player's collision rectangle
@@ -109,14 +141,62 @@ class Player:
             self.health = 0
         print(f"Player took {amount} damage, health is now {self.health}")
 
-    def update(self):
-        # --- NEW: Handle reload timer ---
+    def update(self, move_dict, camera_offset):
+        # --- Handle reload timer ---
         if self.is_reloading:
             current_time = pygame.time.get_ticks()
-            if current_time - self.reload_start_time >= SHOTGUN_RELOAD_TIME:
-                self.shotgun_ammo = SHOTGUN_AMMO_CAPACITY
+            if current_time - self.reload_start_time >= self.shotgun_reload_time:
+                self.shotgun_ammo = self.shotgun_ammo_capacity
                 self.is_reloading = False
                 print("Reload complete.")
+        
+        # --- NEW: Animation Logic ---
+        current_time = pygame.time.get_ticks()
+        is_moving = False
+
+        # Check if it's time to update the animation frame
+        if current_time - self.last_anim_update > self.anim_speed_ms:
+            self.last_anim_update = current_time
+            # Advance the frame, looping back to 0
+            self.current_frame = (self.current_frame + 1) % len(self.walk_right_frames) # 4 frames
+
+        # Check directional movement
+        if move_dict["Right"]:
+            self.image = self.walk_right_frames[self.current_frame]
+            self.facing_right = True
+            is_moving = True
+        elif move_dict["Left"]:
+            self.image = self.walk_left_frames[self.current_frame]
+            self.facing_right = False
+            is_moving = True
+        elif move_dict["Up"] or move_dict["Down"]:
+            # If moving vertically, use the last faced direction
+            if self.facing_right:
+                self.image = self.walk_right_frames[self.current_frame]
+            else:
+                self.image = self.walk_left_frames[self.current_frame]
+            is_moving = True
+        
+        if not is_moving:
+            # Player is standing still, show idle image for the last direction
+            if self.facing_right:
+                self.image = self.idle_image_right
+            else:
+                self.image = self.idle_image_left
+            self.current_frame = 0
+        
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        player_screen_center = self.get_aura_center(camera_offset)
+
+        dx = mouse_x - player_screen_center[0]
+        dy = mouse_y - player_screen_center[1]
+        self.weapon_angle = math.degrees(math.atan2(-dy, dx)) # -dy because pygame's y is inverted
+
+        base_shotgun_img = self.shotgun_original_image
+        self.shotgun_image = pygame.transform.rotate(base_shotgun_img, self.weapon_angle)
+        # Rotate flashlight
+        base_flash_img = self.flashlight_original_image
+        self.flashlight_image = pygame.transform.rotate(base_flash_img, self.weapon_angle)
     
     def swap_item(self , swap_sound):
         if self.is_reloading: # Don't swap while reloading
@@ -270,6 +350,8 @@ class Player:
         elif upgrade_type == 'brightness':
             b = self.flashlight_brightness
             up = UPGRADE_BRIGHTNESS_AMOUNT
+            c = self.flashlight_base_brightness
+            self.flashlight_base_brightness = (min(255 , c[0] + up[0]) , min(255 , c[1] + up[1]) , min(255 , c[2] + up[2]))
             self.flashlight_brightness = (min(255, b[0] + up[0]), min(255, b[1] + up[1]), min(255, b[2] + up[2]))
             print(f"Upgraded Flashlight Brightness to {self.flashlight_brightness}")
         

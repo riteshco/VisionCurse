@@ -3,12 +3,12 @@ import pygame
 WIN_WIDTH = 1920
 WIN_HEIGHT = 1080
 
-PLAYER_SIZE = 20
+PLAYER_SIZE = 40
 PLAYER_SPEED = 6
 PLAYER_MAX_HEALTH = 100
 
 # Maze dimensions
-CELL_SIZE = PLAYER_SIZE * 6  # Corridor size is 3x player size
+CELL_SIZE = PLAYER_SIZE * 3  # Corridor size is 3x player size
 WALL_THICKNESS = 3
 COLS = 10  # Number of columns in the maze
 ROWS = 10  # Number of rows in the maze
@@ -22,7 +22,7 @@ RAY_COUNT = 60
 RAY_LENGTH = 300
 # AURA_RADIUS = 50
 
-LIGHT_AURA_RADIUS = PLAYER_SIZE * 4
+LIGHT_AURA_RADIUS = PLAYER_SIZE * 2
 BOSS_LIGHT_AURA_RADIUS = LIGHT_AURA_RADIUS * 20
 
 FLASHLIGHT_BASE_BRIGHTNESS = (40, 40, 40)
@@ -61,8 +61,8 @@ ENEMY_HEALTH = 50
 ENEMY_MELEE_DAMAGE = 10
 ENEMY_ATTACK_COOLDOWN = 1000 # 1 second
 ENEMY_DETECTION_RANGE = 250 # pixels
-ENEMY_SPAWN_INTERVAL = 1000 # 10 seconds
-ENEMY_MAX_COUNT = 10 # Max enemies on map
+ENEMY_SPAWN_INTERVAL = 100 # 100 ms
+ENEMY_MAX_COUNT = 20 # Max enemies on map
 ENEMY_KILL_REWARD = 1
 
 
@@ -113,3 +113,8 @@ SOUND_BOSS_DEATH = "sounds/boss_death.mp3"
 SOUND_BOSS_ATTACK = "sounds/boss_attack.mp3"
 MUSIC_BOSS_FIGHT = "sounds/epic-dialogue-garv.mp3"
 SOUND_WIN_GAME = "sounds/win_game.mp3"
+
+SHOTGUN_SPRITE_PATH = "images/shotgun.png"
+FLASHLIGHT_SPRITE_PATH = "images/flashlight.png"
+
+BOSS_SPRITE_PATH = "images/Final_boss.png"
