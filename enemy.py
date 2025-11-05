@@ -5,7 +5,7 @@ from constants import *
 
 class Enemy:
     def __init__(self, pos, size):
-        self.pos = [pos[0], pos[1]] # World position
+        self.pos = [pos[0], pos[1]]
         self.size = size
         self.health = ENEMY_HEALTH
         self.speed = ENEMY_SPEED
@@ -14,11 +14,9 @@ class Enemy:
         self.is_far = False
 
     def render(self, screen, camera_offset):
-        # Calculate screen position
         screen_x = self.pos[0] - camera_offset[0]
         screen_y = self.pos[1] - camera_offset[1]
         
-        # Simple green rectangle
         pygame.draw.rect(screen, ENEMY_COLOR, (screen_x, screen_y, self.size[0], self.size[1]))
 
     def get_rect(self):
@@ -40,12 +38,10 @@ class Enemy:
 
         dist = math.dist(player_center, self_center)
 
-        # --- AI Logic ---
         if dist < current_detection_range:
             if not self.is_alerted:
                 self.is_alerted = True
                 alert_sound.play()
-            # 1. Move towards player
             dx = player_center[0] - self_center[0]
             dy = player_center[1] - self_center[1]
             # Normalize vector
@@ -55,7 +51,6 @@ class Enemy:
                 dy = (dy / norm) * self.speed
                 self.move(grid, dx, dy) # Call move method
 
-            # 2. Attack player (melee)
             player_rect = player.get_rect()
             if self.get_rect().colliderect(player_rect):
                 current_time = pygame.time.get_ticks()
@@ -72,7 +67,6 @@ class Enemy:
             self.is_far = False 
 
     def move(self, grid, dx, dy):
-        # This is the same collision logic as the player
         new_x = self.pos[0] + dx
         new_y = self.pos[1] + dy
 

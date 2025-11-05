@@ -7,13 +7,11 @@ PLAYER_SIZE = 60
 PLAYER_SPEED = 6
 PLAYER_MAX_HEALTH = 100
 
-# Maze dimensions
-CELL_SIZE = PLAYER_SIZE * 2.5  # Corridor size is 3x player size
+CELL_SIZE = PLAYER_SIZE * 2.5
 WALL_THICKNESS = 8
-COLS = 10  # Number of columns in the maze
-ROWS = 10  # Number of rows in the maze
+COLS = 10
+ROWS = 10
 
-# Calculate total world size
 WORLD_WIDTH = COLS * CELL_SIZE
 WORLD_HEIGHT = ROWS * CELL_SIZE
 
@@ -29,17 +27,15 @@ FLASHLIGHT_BASE_BRIGHTNESS = (40, 40, 40)
 FLASHLIGHT_GRADIENT_STEPS = 8
 FLASHLIGHT_MAX_BRIGHTNESS = (120, 120, 120)
 
-# Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-RED = (255, 0, 0)         # Exit
-START_BLUE = (0, 0, 255)  # Start
-PURPLE = (40, 0, 80)      # Floor
-PLAYER_COLOR = (255, 100, 100) # Player
+RED = (255, 0, 0)
+START_BLUE = (0, 0, 255)
+PURPLE = (40, 0, 80)
+PLAYER_COLOR = (255, 100, 100)
 
-# --- Shotgun Constants ---
 SHOTGUN_AMMO_CAPACITY = 6
-SHOTGUN_RELOAD_TIME = 2000 # in milliseconds
+SHOTGUN_RELOAD_TIME = 2000 # ms
 SHOTGUN_PELLET_COUNT = 1
 SHOTGUN_SPREAD_ANGLE = 15 # degrees
 SHOTGUN_RANGE = 400
@@ -48,14 +44,13 @@ SHOTGUN_PELLET_THICKNESS = 5
 SHOTGUN_PELLET_LIFETIME = 100 # ms
 SHOTGUN_PELLET_DAMAGE = 25
 
-# --- Keybinds ---
 SWAP_KEY = pygame.K_q
 RELOAD_KEY = pygame.K_r
 
 IMPACT_SHAKE_DURATION = 100 # ms
 IMPACT_SHAKE_STRENGTH = 8
 
-ENEMY_COLOR = (0, 255, 0) # Green
+ENEMY_COLOR = (0, 255, 0)
 ENEMY_SIZE = 20
 ENEMY_SPEED = 2.5
 ENEMY_HEALTH = 50
@@ -63,7 +58,7 @@ ENEMY_MELEE_DAMAGE = 10
 ENEMY_ATTACK_COOLDOWN = 1000 # 1 second
 ENEMY_DETECTION_RANGE = 250 # pixels
 ENEMY_SPAWN_INTERVAL = 100 # 100 ms
-ENEMY_MAX_COUNT = 20 # Max enemies on map
+ENEMY_MAX_COUNT = 20
 ENEMY_KILL_REWARD = 1
 
 
@@ -77,7 +72,7 @@ UPGRADE_PELLET_COUNT = pygame.K_6
 
 UPGRADE_HEALTH_AMOUNT = 25
 UPGRADE_AMMO_AMOUNT = 2
-UPGRADE_RELOAD_SPEED_AMOUNT = 250 # ms reduction
+UPGRADE_RELOAD_SPEED_AMOUNT = 250 # ms
 UPGRADE_FOV_AMOUNT = 10 # degrees
 UPGRADE_BRIGHTNESS_AMOUNT = (20, 20, 20)
 
@@ -87,14 +82,13 @@ FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION = 100 # ms
 FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE = 1
 FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE = 30 # pixels
 
-BOSS_SIZE = PLAYER_SIZE * 10 # 10x player size
-BOSS_HEALTH = 1000 # Takes 40 pellets to kill (1000 / 25)
+BOSS_SIZE = PLAYER_SIZE * 10
+BOSS_HEALTH = 1000
 BOSS_SPEED = 2.0
-BOSS_COLOR = (255, 0, 255) # Magenta
+BOSS_COLOR = (255, 0, 255)
 BOSS_MELEE_DAMAGE = 25
 BOSS_ATTACK_COOLDOWN = 1500 # 1.5 seconds
 
-# Arena will be 2x the window size
 ARENA_WIDTH = WIN_WIDTH * 2
 ARENA_HEIGHT = WIN_HEIGHT * 2
 ARENA_WALL_THICKNESS = 50
@@ -102,9 +96,9 @@ ARENA_WALL_THICKNESS = 50
 SOUND_SHOTGUN_FIRE = "sounds/oh-bs-garv.mp3"
 SOUND_SHOTGUN_RELOAD = "sounds/shotgun_reload.mp3"
 SOUND_SWAP_ITEM = "sounds/swap_item.mp3"
-SOUND_PLAYER_MOVE = "sounds/ahh-ma-ka-garv.mp3" # Should be a short, looping sound
+SOUND_PLAYER_MOVE = "sounds/ahh-ma-ka-garv.mp3"
 SOUND_ENEMY_ATTACK = "sounds/enemy_attack.mp3"
-SOUND_ENEMY_ALERT = "sounds/puchh-garv.mp3" # Bonus: play when they spot player
+SOUND_ENEMY_ALERT = "sounds/puchh-garv.mp3"
 SOUND_SKILL_UPGRADE = "sounds/skill_upgrade.mp3"
 SOUND_SKILL_GAIN = "sounds/skill_gain.mp3"
 MUSIC_BACKGROUND = "sounds/background_music.mp3"

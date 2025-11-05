@@ -5,7 +5,7 @@ from constants import *
 
 class Player:
     def __init__(self, pos, size):
-        self.pos = [pos[0], pos[1]] # World position
+        self.pos = [pos[0], pos[1]]
         self.size = [size, size]
         self.health = 100
         self.speed = PLAYER_SPEED
@@ -30,12 +30,9 @@ class Player:
         self.reload_start_time = 0
 
         try:
-            # Load idle images
             self.idle_image_right = pygame.image.load('images/improved_images/player_idle.png').convert_alpha()
-            # Create the left-facing idle image by flipping the right-facing one
             self.idle_image_left = pygame.transform.flip(self.idle_image_right, True, False)
 
-            # Load walking images
             self.walk_right_frames = [
                 pygame.image.load('images/improved_images/player_right1.png').convert_alpha(),
                 pygame.image.load('images/improved_images/player_right2.png').convert_alpha(),
@@ -52,7 +49,6 @@ class Player:
             self.shotgun_original_image = pygame.image.load(SHOTGUN_SPRITE_PATH).convert_alpha()
             self.flashlight_original_image = pygame.image.load(FLASHLIGHT_SPRITE_PATH).convert_alpha()
             
-            # --- Optional: Scale images to match your PLAYER_SIZE ---
             self.idle_image_right = pygame.transform.scale(self.idle_image_right, (self.size[0], self.size[1]))
             self.idle_image_left = pygame.transform.scale(self.idle_image_left, (self.size[0], self.size[1]))
             
@@ -72,7 +68,6 @@ class Player:
             
         except pygame.error as e:
             print(f"Error loading player images: {e}")
-            # Fallback to a simple surface if images are missing
             self.idle_image_right = pygame.Surface(self.size)
             self.idle_image_right.fill(PLAYER_COLOR)
             self.idle_image_left = self.idle_image_right
@@ -82,26 +77,22 @@ class Player:
             self.flashlight_original_image = pygame.Surface((20,10)); self.flashlight_original_image.fill((255,255,0))
             self.flashlight_original_left = self.flashlight_original_image
 
-        # 2. Animation state variables
         self.current_frame = 0
         self.last_anim_update = 0
         self.anim_speed_ms = 150 # Time between frames (in milliseconds)
-        self.facing_right = True # Track direction for idle
+        self.facing_right = True
 
-        # 3. This is the image that will be drawn
         self.image = self.idle_image_right
 
         self.shotgun_image = self.shotgun_original_image
         self.flashlight_image = self.flashlight_original_image
-        self.weapon_angle = 0 # Use one angle for both
+        self.weapon_angle = 0 
         self.weapon_pivot_offset = [5, 3]
 
     def render(self, screen, camera_offset):
-        # Calculate screen position from world position
         screen_x = self.pos[0] - camera_offset[0]
         screen_y = self.pos[1] - camera_offset[1]
         
-        # Draw player as a simple red square
         screen.blit(self.image, (screen_x, screen_y))
         player_rect = pygame.Rect(screen_x, screen_y, self.size[0], self.size[1])
         # pygame.draw.rect(screen, PLAYER_COLOR, player_rect)
@@ -111,7 +102,6 @@ class Player:
                                 player_rect.centery - item_size / 2, 
                                 item_size, item_size)
 
-        # Calculate the shotgun's screen rect based on the rotated image
         player_screen_center = self.get_aura_center(camera_offset)
         
         # Adjust pivot based on facing direction
@@ -126,7 +116,6 @@ class Player:
             screen.blit(self.flashlight_image, flashlight_screen_rect)
 
     def get_rect(self):
-        # Helper to get the player's collision rectangle
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
     
     def get_center_pos(self):
@@ -141,8 +130,7 @@ class Player:
             self.health = 0
         print(f"Player took {amount} damage, health is now {self.health}")
 
-    def update(self, move_dict, camera_offset):
-        # --- Handle reload timer ---
+    def update(self, move_dict, camera_offset , joystick_horizontal_aim , joystick_vertical_aim):
         if self.is_reloading:
             current_time = pygame.time.get_ticks()
             if current_time - self.reload_start_time >= self.shotgun_reload_time:
@@ -150,26 +138,23 @@ class Player:
                 self.is_reloading = False
                 print("Reload complete.")
         
-        # --- NEW: Animation Logic ---
         current_time = pygame.time.get_ticks()
         is_moving = False
 
-        # Check if it's time to update the animation frame
         if current_time - self.last_anim_update > self.anim_speed_ms:
             self.last_anim_update = current_time
             # Advance the frame, looping back to 0
             self.current_frame = (self.current_frame + 1) % len(self.walk_right_frames) # 4 frames
 
-        # Check directional movement
-        if move_dict["Right"]:
+        if move_dict["Right"] or move_dict["Joystick_Right"]:
             self.image = self.walk_right_frames[self.current_frame]
             self.facing_right = True
             is_moving = True
-        elif move_dict["Left"]:
+        elif move_dict["Left"] or move_dict["Joystick_Left"]:
             self.image = self.walk_left_frames[self.current_frame]
             self.facing_right = False
             is_moving = True
-        elif move_dict["Up"] or move_dict["Down"]:
+        elif move_dict["Up"] or move_dict["Down"] or move_dict["Joystick_Up"] or move_dict["Joystick_Down"]:
             # If moving vertically, use the last faced direction
             if self.facing_right:
                 self.image = self.walk_right_frames[self.current_frame]
@@ -185,16 +170,20 @@ class Player:
                 self.image = self.idle_image_left
             self.current_frame = 0
         
-        mouse_x, mouse_y = pygame.mouse.get_pos()
-        player_screen_center = self.get_aura_center(camera_offset)
+        if joystick_horizontal_aim or joystick_vertical_aim:
+            mouse_x , mouse_y = joystick_horizontal_aim , joystick_vertical_aim
+            self.weapon_angle = math.degrees(math.atan2(-joystick_vertical_aim , joystick_horizontal_aim))
+        else:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            player_screen_center = self.get_aura_center(camera_offset)
+            dx = mouse_x - player_screen_center[0]
+            dy = mouse_y - player_screen_center[1]
+            self.weapon_angle = math.degrees(math.atan2(-dy, dx)) # -dy because pygame's y is inverted
 
-        dx = mouse_x - player_screen_center[0]
-        dy = mouse_y - player_screen_center[1]
-        self.weapon_angle = math.degrees(math.atan2(-dy, dx)) # -dy because pygame's y is inverted
 
         base_shotgun_img = self.shotgun_original_image
         self.shotgun_image = pygame.transform.rotate(base_shotgun_img, self.weapon_angle)
-        # Rotate flashlight
+
         base_flash_img = self.flashlight_original_image
         self.flashlight_image = pygame.transform.rotate(base_flash_img, self.weapon_angle)
     
@@ -210,7 +199,6 @@ class Player:
         print(f"Equipped: {self.equipped_item}")
 
     def shoot(self, target_angle, grid , fire_sound , reload_sound , is_boss_fight=False):
-        # --- NEW: Shotgun shooting logic ---
         if self.equipped_item != "shotgun" or self.is_reloading:
             return None
         
@@ -225,7 +213,6 @@ class Player:
         player_center_world = self.get_center_pos()
 
         for _ in range(self.shotgun_pellet_count):
-            # Calculate random angle within spread
             angle = target_angle + math.radians(random.uniform(-SHOTGUN_SPREAD_ANGLE / 2, SHOTGUN_SPREAD_ANGLE / 2))
             
             step_x = math.cos(angle)
@@ -251,7 +238,7 @@ class Player:
                     col = int(ray_x // CELL_SIZE)
                     row = int(ray_y // CELL_SIZE)
                     if not (0 <= col < COLS and 0 <= row < ROWS):
-                        hit_wall = True # Hit world boundary
+                        hit_wall = True
                         break
                         
                     cell = grid[col][row]
@@ -310,7 +297,6 @@ class Player:
         new_x = self.pos[0] + dx * self.speed
         new_y = self.pos[1] + dy * self.speed
 
-        # Clamp to arena walls
         new_x = max(ARENA_WALL_THICKNESS, min(new_x, ARENA_WIDTH - self.size[0] - ARENA_WALL_THICKNESS))
         new_y = max(ARENA_WALL_THICKNESS, min(new_y, ARENA_HEIGHT - self.size[1] - ARENA_WALL_THICKNESS))
         

@@ -26,22 +26,32 @@ def create_light_aura(radius):
     surface.set_colorkey(BLACK)
     return surface
 
-def draw_menu(screen, title_font, button_font):
+def draw_menu(screen, title_font, button_font , is_controller_connected):
     screen.fill(BLACK)
     
     title_text = title_font.render("VISIONCURSE", True, RED)
     title_rect = title_text.get_rect(center=(WIN_WIDTH / 2, WIN_HEIGHT / 3))
     screen.blit(title_text, title_rect)
     
-    play_button_rect = pygame.Rect((WIN_WIDTH / 2) - 100, (WIN_HEIGHT / 2), 200, 50)
-    pygame.draw.rect(screen, (0, 100, 0), play_button_rect)
-    play_text = button_font.render("PLAY", True, WHITE)
+    if is_controller_connected:
+        play_button_rect = pygame.Rect((WIN_WIDTH / 2) - 200, (WIN_HEIGHT / 2), 400, 50)
+        pygame.draw.rect(screen, (0, 100, 0), play_button_rect)
+        play_text = button_font.render("Press X to PLAY", True, WHITE)
+    else:
+        play_button_rect = pygame.Rect((WIN_WIDTH / 2) - 100, (WIN_HEIGHT / 2), 200, 50)
+        pygame.draw.rect(screen, (0, 100, 0), play_button_rect)
+        play_text = button_font.render("PLAY", True, WHITE)
     play_text_rect = play_text.get_rect(center=play_button_rect.center)
     screen.blit(play_text, play_text_rect)
     
-    quit_button_rect = pygame.Rect((WIN_WIDTH / 2) - 100, (WIN_HEIGHT / 2) + 70, 200, 50)
-    pygame.draw.rect(screen, (100, 0, 0), quit_button_rect)
-    quit_text = button_font.render("QUIT", True, WHITE)
+    if is_controller_connected:
+        quit_button_rect = pygame.Rect((WIN_WIDTH / 2) - 200, (WIN_HEIGHT / 2) + 70, 400, 50)
+        pygame.draw.rect(screen, (100, 0, 0), quit_button_rect)
+        quit_text = button_font.render("Press B to QUIT" , True , WHITE)
+    else:
+        quit_button_rect = pygame.Rect((WIN_WIDTH / 2) - 100, (WIN_HEIGHT / 2) + 70, 200, 50)
+        pygame.draw.rect(screen, (100, 0, 0), quit_button_rect)
+        quit_text = button_font.render("QUIT", True, WHITE)
     quit_text_rect = quit_text.get_rect(center=quit_button_rect.center)
     screen.blit(quit_text, quit_text_rect)
     
@@ -86,6 +96,7 @@ def draw_arena_walls(screen, camera_offset):
 # --- Main Game Function ---
 def main():
     pygame.init()
+    pygame.joystick.init()
     pygame.mixer.init()
     pygame.mixer.set_num_channels(16)
 
@@ -171,7 +182,7 @@ def main():
     current_detection_range = ENEMY_DETECTION_RANGE
 
     camera_offset = [0, 0]
-    move = {"Up": False, "Down": False, "Left": False, "Right": False}
+    move = {"Up": False, "Down": False, "Left": False, "Right": False , "Joystick_Up" : False , "Joystick_Down" : False , "Joystick_Left":False , "Joystick_Right":False}
     
     # --- State Management ---
     game_state = GAME_STATE_MENU # Start at menu
@@ -186,16 +197,124 @@ def main():
 
     flashlight_max_trade_off = FLASHLIGHT_TRADE_OFF_MAX_ENEMIES_INCREASE
 
+    joysticks = []
+    joystick_shoot = False
+    swap_cooldown = 30
+    shoot_cooldown = 30
+
+    skill_upgrade_cooldown = 4
+
     # Main game loop
     running = True
     while running:
         current_time = pygame.time.get_ticks()
         dx, dy = 0, 0 # Reset movement deltas each frame
+        horizontal_aiming_component = 0
+        vertical_aiming_component = 0
 
-        # --- SINGLE Event Handling Loop ---
+        if pygame.joystick.get_count():
+            is_controller_connected = True
+        else:
+            is_controller_connected = False
+
+        for joystick in joysticks:
+            if joystick.get_axis(0) > 0.001:
+                move["Joystick_Right"] = True
+            elif joystick.get_axis(0) < -0.001:
+                move["Joystick_Left"] = True
+            else:
+                move["Joystick_Right"] = False
+                move["Joystick_Left"] = False
+            if joystick.get_axis(1) > 0.001:
+                move["Joystick_Down"] = True
+            elif joystick.get_axis(1) < -0.001:
+                move["Joystick_Up"] = True
+            else:
+                move["Joystick_Down"] = False
+                move["Joystick_Up"] = False
+            print("Joystick Up : " , move["Joystick_Up"])
+            print("Joystick Down : " , move["Joystick_Down"])
+            
+            if joystick.get_axis(0) > 0.001 or joystick.get_axis(0) < -0.001:
+                dx = joystick.get_axis(0)
+            if joystick.get_axis(1) > 0.001 or joystick.get_axis(1) < -0.001:
+                dy = joystick.get_axis(1)
+
+            if abs(joystick.get_axis(4)) > 0.001:
+                vertical_aiming_component = joystick.get_axis(4)
+            if abs(joystick.get_axis(3)) > 0.001:
+                horizontal_aiming_component = joystick.get_axis(3)
+
+            if(joystick.get_axis(5) > 0.99):
+                joystick_shoot = True
+            
+            if joystick.get_button(4):
+                if swap_cooldown == 30:
+                    player.swap_item(sounds["swap_item"])
+                    swap_cooldown = 0
+            
+            if game_state == GAME_STATE_MENU and joystick.get_button(2):
+                game_state = GAME_STATE_PLAYING
+            if game_state == GAME_STATE_MENU and joystick.get_button(1):
+                running = False
+
+            print("hat : " , joystick.get_hat(0))
+
+            if game_state == GAME_STATE_PLAYING:
+                if skill_upgrade_cooldown == 4:
+                    if joystick.get_hat(0)[1] == 1:
+                        sounds['skill_upgrade'].play()
+                        player.upgrade('health')
+                    elif joystick.get_hat(0)[1] == -1:
+                        sounds['skill_upgrade'].play()
+                        player.upgrade('ammo')
+                    elif joystick.get_hat(0)[0] == -1:
+                        sounds['skill_upgrade'].play()
+                        player.upgrade('reload')
+                    elif joystick.get_hat(0)[0] == 1:
+                        sounds['skill_upgrade'].play()
+                        if player.upgrade('fov'):
+                            current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
+                            current_max_enemies += flashlight_max_trade_off
+                            flashlight_max_trade_off *= 2
+                            current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
+                            print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
+                    elif joystick.get_button(2):
+                        sounds['skill_upgrade'].play()
+                        if player.upgrade('brightness'):
+                            current_spawn_interval = max(500, current_spawn_interval - FLASHLIGHT_TRADE_OFF_SPAWN_INTERVAL_REDUCTION)
+                            current_max_enemies += flashlight_max_trade_off
+                            flashlight_max_trade_off *= 2
+                            current_detection_range += FLASHLIGHT_TRADE_OFF_DETECTION_RANGE_INCREASE
+                            print(f"WARNING: Difficulty increased! Spawn Rate: {current_spawn_interval}ms, Max Enemies: {current_max_enemies}, Detect Range: {current_detection_range}")
+                    elif joystick.get_button(3):
+                        sounds['skill_upgrade'].play()
+                        player.upgrade('pellet_count')
+                    skill_upgrade_cooldown = 0
+
+
+            if swap_cooldown < 30:
+                swap_cooldown+=1
+            
+            print("1: " , joystick.get_axis(2))
+            print("2: " , joystick.get_axis(5))
+            print("button : " , joystick.get_button(4))
+            
+            # print("horizontal : " , horizontal_aiming_component)
+            # print("vertical : " , vertical_aiming_component)
+
+        if shoot_cooldown < 30:
+            shoot_cooldown += 1
+        if skill_upgrade_cooldown < 4:
+            skill_upgrade_cooldown += 1
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False    
+            
+            if event.type == pygame.JOYDEVICEADDED:
+                joy = pygame.joystick.Joystick(event.device_index)
+                joysticks.append(joy)
             
             if game_state == GAME_STATE_MENU:
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -207,16 +326,21 @@ def main():
 
             elif game_state == GAME_STATE_PLAYING or game_state == GAME_STATE_BOSS_FIGHT:
                 # --- Events for both Play and Boss states ---
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1 and player.health > 0:
+                if ((event.type == pygame.MOUSEBUTTONDOWN and  event.button == 1) or joystick_shoot == True) and player.health > 0:
+                    if horizontal_aiming_component or vertical_aiming_component:
+                        mouse_x , mouse_y = horizontal_aiming_component , vertical_aiming_component
+                        target_angle = math.atan2(mouse_y , mouse_x)
+                    else:
                         mouse_x, mouse_y = pygame.mouse.get_pos()
                         player_screen_center = (player.pos[0] - camera_offset[0] , player.pos[1] - camera_offset[1])
                         target_angle = math.atan2(mouse_y - player_screen_center[1], 
-                                                  mouse_x - player_screen_center[0])
-                        
+                                              mouse_x - player_screen_center[0])
+                    if shoot_cooldown == 30:
                         is_boss = (game_state == GAME_STATE_BOSS_FIGHT)
                         hits = player.shoot(target_angle, grid, sounds['shotgun_fire'], sounds['shotgun_reload'], is_boss)
-                        
+                        joystick_shoot = False
+                        shoot_cooldown = 0
+                    
                         if hits:
                             pellet_lines = hits
                             pellet_draw_start_time = current_time
@@ -287,11 +411,9 @@ def main():
                     main()
                     return
 
-        # --- Game Logic / State Updates ---
         
         if game_state == GAME_STATE_PLAYING:
             if player.health > 0:
-                # --- Player Movement ---
                 if move["Up"]: dy = -1
                 if move["Down"]: dy = 1
                 if move["Left"]: dx = -1
@@ -303,12 +425,11 @@ def main():
                     footstep_channel.stop()
                 
                 player.move_player(grid, dx, dy)
-                player.update(move , camera_offset) 
+                player.update(move , camera_offset , horizontal_aiming_component , vertical_aiming_component) 
 
                 # --- Enemy Spawning ---
                 if current_time - last_enemy_spawn_time > current_spawn_interval:
                     if len(enemies) < current_max_enemies:
-                        # ... (spawn logic)
                         player_col = int(player.get_center_pos()[0] // CELL_SIZE)
                         player_row = int(player.get_center_pos()[1] // CELL_SIZE)
                         spawn_col, spawn_row = player_col, player_row
@@ -322,12 +443,11 @@ def main():
                         enemies.append(Enemy([spawn_x, spawn_y], [ENEMY_SIZE, ENEMY_SIZE]))
                         last_enemy_spawn_time = current_time
                 
-                # --- Update Enemies ---
                 for enemy in enemies:
                     enemy.update(player, grid , current_detection_range, sounds['enemy_attack'], sounds['enemy_alert'])
                     if enemy.is_far:
                         enemies.remove(enemy)
-                # --- Check pellet hits ---
+
                 if pellet_lines:
                     dead_enemies = []
                     for enemy in enemies:
@@ -370,7 +490,6 @@ def main():
 
         elif game_state == GAME_STATE_BOSS_FIGHT:
             if player.health > 0:
-                # --- Player Movement ---
                 if move["Up"]: dy = -1
                 if move["Down"]: dy = 1
                 if move["Left"]: dx = -1
@@ -381,14 +500,12 @@ def main():
                 elif (dx == 0 and dy == 0) and footstep_channel.get_busy():
                     footstep_channel.stop()
                 
-                player.move_player_arena(dx, dy) # <-- Use new move function
-                player.update(move , camera_offset) 
+                player.move_player_arena(dx, dy)
+                player.update(move , camera_offset , horizontal_aiming_component , vertical_aiming_component) 
 
-                # --- Update Boss ---
                 if boss:
                     boss.update(player, sounds['boss_attack'])
                 
-                # --- Check pellet hits ---
                 if pellet_lines and boss:
                     pellets_hit = 0
                     boss_rect = boss.get_rect()
@@ -422,7 +539,6 @@ def main():
             if fade_alpha < 255 and fading_to_state != -1: # Fading IN (to black)
                 fade_alpha = min(255, fade_alpha + 5)
                 if fade_alpha == 255: # Reached black
-                    # --- This is the moment of transition ---
                     if fading_to_state == GAME_STATE_BOSS_FIGHT:
                         enemies.clear() # Clear maze enemies
                         player.pos = [ARENA_WIDTH / 2, ARENA_HEIGHT - (PLAYER_SIZE * 4)]
@@ -435,7 +551,7 @@ def main():
                         pygame.mixer.music.set_volume(0.4)
                         pygame.mixer.music.play(-1)
                     
-                    fading_to_state = -1 # Now we're fading OUT
+                    fading_to_state = -1
             
             elif fade_alpha > 0 and fading_to_state == -1: # Fading OUT (from black)
                 fade_alpha = max(0, fade_alpha - 5)
@@ -448,11 +564,10 @@ def main():
         else:
             is_shaking = False
 
-        # --- Drawing ---
         draw_tiled_floor(screen , floor_tile_img , camera_offset)
 
         if game_state == GAME_STATE_MENU:
-            play_button_rect, quit_button_rect = draw_menu(screen, menu_title_font, menu_button_font)
+            play_button_rect, quit_button_rect = draw_menu(screen, menu_title_font, menu_button_font , is_controller_connected)
 
         elif game_state == GAME_STATE_PLAYING:
             for c in range(COLS):
@@ -492,7 +607,7 @@ def main():
                 is_boss = (game_state == GAME_STATE_BOSS_FIGHT)
                 # Only cast rays in maze
                 if not is_boss: 
-                    vision_polygon_world = cast_rays(player, grid , player.fov_angle , camera_offset)
+                    vision_polygon_world = cast_rays(player, grid , player.fov_angle , camera_offset , horizontal_aiming_component , vertical_aiming_component)
                     vision_polygon_screen = []
                     for world_pos in vision_polygon_world:
                         screen_x = world_pos[0] - camera_offset[0]
@@ -519,7 +634,6 @@ def main():
                                 scaled_polygon.append((scaled_x, scaled_y))
                             pygame.draw.polygon(light_surface, color, scaled_polygon)
             
-            # --- MODIFICATION: Select correct aura ---
             if game_state == GAME_STATE_BOSS_FIGHT:
                 current_aura_sprite = light_aura_sprite_boss
             else:
@@ -527,7 +641,6 @@ def main():
 
             aura_rect = current_aura_sprite.get_rect(center=player_screen_center)
             light_surface.blit(current_aura_sprite, aura_rect, special_flags=pygame.BLEND_RGB_ADD)
-            # --- END MODIFICATION ---
 
             screen.blit(light_surface, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
 
@@ -553,14 +666,24 @@ def main():
                     menu_title = upgrade_font.render("Upgrades Available (Cost: 1)", True, (255, 255, 0))
                     screen.blit(menu_title, (sp_rect.left, y_offset))
                     y_offset += 30
-                    upgrades = [
-                        f"[1] Max Health (+{UPGRADE_HEALTH_AMOUNT})",
-                        f"[2] Ammo Capacity (+{UPGRADE_AMMO_AMOUNT})",
-                        f"[3] Reload Speed (-{UPGRADE_RELOAD_SPEED_AMOUNT}ms)",
-                        f"[4] Flashlight Angle (+{UPGRADE_FOV_AMOUNT})",
-                        f"[5] Flashlight Brightness",
-                        f"[6] Shotgun Pellet count"
-                    ]
+                    if pygame.joystick.get_count():
+                        upgrades = [
+                            f"[D-pad Up] Max Health (+{UPGRADE_HEALTH_AMOUNT})",
+                            f"[D-pad Down] Ammo Capacity (+{UPGRADE_AMMO_AMOUNT})",
+                            f"[D-pad Left] Reload Speed (-{UPGRADE_RELOAD_SPEED_AMOUNT}ms)",
+                            f"[D-pad Right] Flashlight Angle (+{UPGRADE_FOV_AMOUNT})",
+                            f"[X] Flashlight Brightness",
+                            f"[Y] Shotgun Pellet count"
+                        ]
+                    else:
+                        upgrades = [
+                            f"[1] Max Health (+{UPGRADE_HEALTH_AMOUNT})",
+                            f"[2] Ammo Capacity (+{UPGRADE_AMMO_AMOUNT})",
+                            f"[3] Reload Speed (-{UPGRADE_RELOAD_SPEED_AMOUNT}ms)",
+                            f"[4] Flashlight Angle (+{UPGRADE_FOV_AMOUNT})",
+                            f"[5] Flashlight Brightness",
+                            f"[6] Shotgun Pellet count"
+                        ]
                     for text in upgrades:
                         text_surf = upgrade_font.render(text, True, WHITE)
                         screen.blit(text_surf, (sp_rect.left, y_offset))
@@ -593,10 +716,14 @@ def main():
             fade_surface.set_alpha(fade_alpha)
             screen.blit(fade_surface, (0, 0))
 
-        # --- SINGLE Display Flip ---
+        font = pygame.font.SysFont("Futura" , 30)
+        if pygame.joystick.get_count():
+            img = font.render("Controller Connected !" , True , "green")
+            screen.blit(img , (WIN_WIDTH - img.get_width() , WIN_HEIGHT - img.get_height()))
+        
+            
         pygame.display.flip()
         
-        # --- Cap the framerate ---
         clock.tick(60)
 
     pygame.quit()
