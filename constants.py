@@ -3,13 +3,13 @@ import pygame
 WIN_WIDTH = 1920
 WIN_HEIGHT = 1080
 
-PLAYER_SIZE = 40
+PLAYER_SIZE = 60
 PLAYER_SPEED = 6
 PLAYER_MAX_HEALTH = 100
 
 # Maze dimensions
-CELL_SIZE = PLAYER_SIZE * 3  # Corridor size is 3x player size
-WALL_THICKNESS = 3
+CELL_SIZE = PLAYER_SIZE * 2.5  # Corridor size is 3x player size
+WALL_THICKNESS = 8
 COLS = 10  # Number of columns in the maze
 ROWS = 10  # Number of rows in the maze
 
@@ -44,6 +44,7 @@ SHOTGUN_PELLET_COUNT = 1
 SHOTGUN_SPREAD_ANGLE = 15 # degrees
 SHOTGUN_RANGE = 400
 SHOTGUN_PELLET_COLOR = (255, 200, 0)
+SHOTGUN_PELLET_THICKNESS = 5
 SHOTGUN_PELLET_LIFETIME = 100 # ms
 SHOTGUN_PELLET_DAMAGE = 25
 
@@ -118,3 +119,6 @@ SHOTGUN_SPRITE_PATH = "images/shotgun.png"
 FLASHLIGHT_SPRITE_PATH = "images/flashlight.png"
 
 BOSS_SPRITE_PATH = "images/Final_boss.png"
+
+TILE1_PATH = "images/stone_tile_1.png"
+TILE2_PATH = "images/stone_tile_2.png"

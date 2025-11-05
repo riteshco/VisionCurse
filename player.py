@@ -61,7 +61,7 @@ class Player:
 
 
 
-            shotgun_size = (int(self.size[0] * 1.5), int(self.size[1] * 0.75))
+            shotgun_size = (int(self.size[0] * 1.5), int(self.size[1] * 1.6))
             self.shotgun_original_image = pygame.transform.scale(self.shotgun_original_image, shotgun_size)
             self.shotgun_original_left = pygame.transform.flip(self.shotgun_original_image, False, True)
 

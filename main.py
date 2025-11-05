@@ -47,6 +47,22 @@ def draw_menu(screen, title_font, button_font):
     
     return play_button_rect, quit_button_rect
 
+def draw_tiled_floor(screen, tile_img, camera_offset):
+    tile_width, tile_height = tile_img.get_size()
+    
+    # Calculate the top-left tile index based on camera
+    # Use modulo to find the offset *within* a tile
+    start_x = - (camera_offset[0] % tile_width)
+    start_y = - (camera_offset[1] % tile_height)
+    
+    # Calculate how many tiles we need to draw
+    num_tiles_x = (WIN_WIDTH // tile_width) + 2 # +2 to cover edges
+    num_tiles_y = (WIN_HEIGHT // tile_height) + 2
+    
+    for x in range(num_tiles_x):
+        for y in range(num_tiles_y):
+            screen.blit(tile_img, (start_x + x * tile_width, start_y + y * tile_height))
+
 # --- Function to draw the boss arena walls ---
 def draw_arena_walls(screen, camera_offset):
     wall_rects = [
@@ -83,6 +99,14 @@ def main():
     game_over_font = pygame.font.SysFont('Arial', 100)
     menu_title_font = pygame.font.SysFont('Arial', 120)
     menu_button_font = pygame.font.SysFont('Arial', 40)
+
+    try:
+        floor_tile_img = pygame.image.load(TILE2_PATH).convert()
+        floor_tile_img = pygame.transform.scale(floor_tile_img, (CELL_SIZE, CELL_SIZE))
+    except pygame.error as e:
+        print(f"Error loading floor tile: {e}")
+        floor_tile_img = pygame.Surface((CELL_SIZE, CELL_SIZE))
+        floor_tile_img.fill(PURPLE)
 
     # --- Load Sounds ---
     try:
@@ -425,7 +449,7 @@ def main():
             is_shaking = False
 
         # --- Drawing ---
-        screen.fill(PURPLE) # Draw floor color everywhere
+        draw_tiled_floor(screen , floor_tile_img , camera_offset)
 
         if game_state == GAME_STATE_MENU:
             play_button_rect, quit_button_rect = draw_menu(screen, menu_title_font, menu_button_font)
@@ -458,7 +482,7 @@ def main():
                 for start_world, end_world in pellet_lines:
                     start_screen = (start_world[0] - camera_offset[0], start_world[1] - camera_offset[1])
                     end_screen = (end_world[0] - camera_offset[0], end_world[1] - camera_offset[1])
-                    pygame.draw.line(screen, SHOTGUN_PELLET_COLOR, start_screen, end_screen, 2)
+                    pygame.draw.line(screen, SHOTGUN_PELLET_COLOR, start_screen, end_screen, SHOTGUN_PELLET_THICKNESS)
             else:
                 pellet_lines.clear()
 

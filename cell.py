@@ -24,7 +24,7 @@ class Cell:
             return
 
         # Fill visited cells with a different color (now our floor)
-        pygame.draw.rect(screen, PURPLE, (screen_x, screen_y, CELL_SIZE, CELL_SIZE))
+        # pygame.draw.rect(screen, PURPLE, (screen_x, screen_y, CELL_SIZE, CELL_SIZE))
 
         # Draw walls
         if self.walls['top']:
