@@ -13,11 +13,29 @@ class Enemy:
         self.is_alerted = False
         self.is_far = False
 
-    def render(self, screen, camera_offset):
-        screen_x = self.pos[0] - camera_offset[0]
-        screen_y = self.pos[1] - camera_offset[1]
+        try:
+            self.original_image = pygame.image.load(ENEMY_SPRITE_PATH).convert_alpha()
+            self.original_image = pygame.transform.scale(self.original_image, (self.size[0], self.size[1]))
+        except pygame.error as e:
+            print(f"Error loading enemy image: {e}")
+            self.original_image = pygame.Surface(self.size)
+            self.original_image.fill(ENEMY_COLOR)
         
-        pygame.draw.rect(screen, ENEMY_COLOR, (screen_x, screen_y, self.size[0], self.size[1]))
+        self.image = self.original_image
+
+    def render(self, screen, camera_offset):
+        world_center = self.get_center_pos()
+        screen_center_x = world_center[0] - camera_offset[0]
+        screen_center_y = world_center[1] - camera_offset[1]
+        
+        screen_rect = self.image.get_rect(center=(screen_center_x, screen_center_y))
+        
+        screen.blit(self.image, screen_rect)
+
+        # screen_x = self.pos[0] - camera_offset[0]
+        # screen_y = self.pos[1] - camera_offset[1]
+        
+        # pygame.draw.rect(screen, ENEMY_COLOR, (screen_x, screen_y, self.size[0], self.size[1]))
 
     def get_rect(self):
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
@@ -44,6 +62,10 @@ class Enemy:
                 alert_sound.play()
             dx = player_center[0] - self_center[0]
             dy = player_center[1] - self_center[1]
+
+            angle = math.degrees(math.atan2(-dy, dx))
+            self.image = pygame.transform.rotate(self.original_image, angle)
+
             # Normalize vector
             norm = math.sqrt(dx * dx + dy * dy)
             if norm > 0:
@@ -60,6 +82,7 @@ class Enemy:
                     self.last_attack_time = current_time
         elif dist > current_detection_range * 1.5:
             self.is_alerted = False
+            self.image = self.original_image
         
         if dist > current_detection_range * 3:
             self.is_far = True

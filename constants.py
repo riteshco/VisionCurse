@@ -51,7 +51,7 @@ IMPACT_SHAKE_DURATION = 100 # ms
 IMPACT_SHAKE_STRENGTH = 8
 
 ENEMY_COLOR = (0, 255, 0)
-ENEMY_SIZE = 20
+ENEMY_SIZE = PLAYER_SIZE
 ENEMY_SPEED = 2.5
 ENEMY_HEALTH = 50
 ENEMY_MELEE_DAMAGE = 10
@@ -113,6 +113,7 @@ SHOTGUN_SPRITE_PATH = "images/shotgun.png"
 FLASHLIGHT_SPRITE_PATH = "images/flashlight.png"
 
 BOSS_SPRITE_PATH = "images/Final_boss.png"
+ENEMY_SPRITE_PATH = "images/enemy.png"
 
 TILE1_PATH = "images/stone_tile_1.png"
 TILE2_PATH = "images/stone_tile_2.png"
