@@ -93,11 +93,11 @@ ARENA_WIDTH = WIN_WIDTH * 2
 ARENA_HEIGHT = WIN_HEIGHT * 2
 ARENA_WALL_THICKNESS = 50
 
-SOUND_SHOTGUN_FIRE = "sounds/oh-bs-garv.mp3"
-SOUND_SHOTGUN_RELOAD = "sounds/shotgun_reload.mp3"
+SOUND_SHOTGUN_FIRE = "sounds/ahh-ma-ka-garv.mp3"
+SOUND_SHOTGUN_RELOAD = "sounds/ahh-ma-ka-garv.mp3"
 SOUND_SWAP_ITEM = "sounds/swap_item.mp3"
-SOUND_PLAYER_MOVE = "sounds/ahh-ma-ka-garv.mp3"
-SOUND_ENEMY_ATTACK = "sounds/enemy_attack.mp3"
+SOUND_PLAYER_MOVE = "sounds/walking_ashpect.mp3"
+SOUND_ENEMY_ATTACK = "sounds/oh-bs-garv.mp3"
 SOUND_ENEMY_ALERT = "sounds/puchh-garv.mp3"
 SOUND_SKILL_UPGRADE = "sounds/skill_upgrade.mp3"
 SOUND_SKILL_GAIN = "sounds/skill_gain.mp3"
